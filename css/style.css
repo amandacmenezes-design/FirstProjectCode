@@ -557,3 +557,8 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root[data-estilo="vidro"] { --superficie: #ffffff; }
 }
+:root[data-estilo="vidro"] .destaque .eyebrow, :root[data-estilo="vidro"] .res .eyebrow { color: var(--luz-claro, var(--luz)); }
+:root[data-estilo="vidro"] .tag-tarefa { background: color-mix(in srgb, var(--luz) 28%, transparent); color: var(--luz-claro, var(--luz)); }
+:root[data-estilo="vidro"] .cal-dia.feriado { color: var(--luz-claro, var(--luz)); background: color-mix(in srgb, var(--luz) 24%, transparent); }
+:root[data-estilo="vidro"] .ponto-tarefa { background: var(--luz-claro, var(--luz)); }
+:root[data-estilo="vidro"] .legenda-g i { background: var(--grafico); }

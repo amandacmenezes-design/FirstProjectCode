@@ -15,6 +15,11 @@ function vidro(nome, c) {
 }
 
 const VIDROS = {
+  vidroCinza: vidro('Vidro · cinza, violeta e azul', {
+    base: '#1d1e24', lateral: '#141519', acento: '#8b7bff', acentoClaro: '#b5aaff', acentoTinta: '#ffffff', suave: 'rgba(139, 123, 255, .16)',
+    d1: '#6a55f0', d2: '#1f2f7c', luz: '#2f4fb5', luzClaro: '#8fa8ff', forte: '#22398a', luzTinta: '#ffffff',
+    brilho1: 'rgba(139, 123, 255, .13)', brilho2: 'rgba(47, 79, 181, .16)',
+  }),
   vidro: vidro('Vidro · preto e azul', {
     base: '#0b0c10', lateral: '#08090c', acento: '#4d8dff', acentoClaro: '#8fb6ff', acentoTinta: '#ffffff', suave: 'rgba(77, 141, 255, .16)',
     d1: '#2f6fe8', d2: '#16357d', luz: '#2ccfe0', luzClaro: '#7ee8f2', forte: '#13a7ba', luzTinta: '#04252c',
@@ -100,7 +105,7 @@ const BASE_ESCURO = [
   '--sombra:0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .3)', '--sombra-forte:0 20px 60px rgba(0, 0, 0, .6)',
 ].join(';');
 
-export const APARENCIA_PADRAO = { paleta: 'vidro', fonte: 'outfit' };
+export const APARENCIA_PADRAO = { paleta: 'vidroCinza', fonte: 'outfit' };
 
 function variaveis(t, f) {
   const v = [
