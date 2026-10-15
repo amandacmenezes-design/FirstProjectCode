@@ -3,16 +3,16 @@ import { PRESETS } from './feriados.js';
 import { PRAZOS_USUAIS, calcularPrazo, criarCalendario, situacao } from './prazos.js';
 import { analisarNumeroCnj } from './cnj.js';
 import { buscarComunicacoes, sugerirPrazo } from './djen.js';
-import { APARENCIA_PADRAO, FONTES, PALETAS, cssDoTema } from './tema.js';
+import { APARENCIA_PADRAO, FONTES, PALETAS, cssDoTema, estiloDoTema } from './tema.js';
 import { carregar, estadoVazio, normalizar, novoId, salvar } from './store.js';
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const MESES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 let estado = carregar() || estadoVazio();
-if (!estado.config.temaModerno) {
-  estado.config.aparencia = { ...(estado.config.aparencia || {}), paleta: 'moderno' };
-  estado.config.temaModerno = true;
+if (!estado.config.temaVidro) {
+  estado.config.aparencia = { ...(estado.config.aparencia || {}), paleta: 'vidro' };
+  estado.config.temaVidro = true;
   salvar(estado);
 }
 const ui = {
@@ -752,6 +752,7 @@ function aplicarTema() {
   if (!el) { el = document.createElement('style'); el.id = 'tema-painel'; document.head.append(el); }
   const css = cssDoTema(aparencia());
   if (el.textContent !== css) el.textContent = css;
+  document.documentElement.dataset.estilo = estiloDoTema(aparencia());
 }
 
 function render() {

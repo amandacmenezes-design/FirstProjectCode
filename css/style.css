@@ -496,3 +496,63 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
   .temas { grid-template-columns: minmax(0, 1fr); }
 }
 .destaque.coluna .destaque-corpo { flex: none; }
+
+/* ---------- estilo vidro (glassmorphism) ---------- */
+:root[data-estilo="vidro"] { --raio: 22px; --sombra: 0 1px 1px rgba(20, 30, 70, .04), 0 10px 30px rgba(20, 30, 70, .08); }
+:root[data-estilo="vidro"] body { background: var(--fundo-imagem, var(--fundo)); background-attachment: fixed; }
+:root[data-estilo="vidro"] .shell { background: none; }
+:root[data-estilo="vidro"] .lateral,
+:root[data-estilo="vidro"] .cartao,
+:root[data-estilo="vidro"] .kpi,
+:root[data-estilo="vidro"] .proc,
+:root[data-estilo="vidro"] .nav-movel,
+:root[data-estilo="vidro"] .gaveta,
+:root[data-estilo="vidro"] .tema,
+:root[data-estilo="vidro"] .fonte-op {
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border-color: rgba(255, 255, 255, .55);
+}
+:root[data-estilo="vidro"] .cartao, :root[data-estilo="vidro"] .kpi, :root[data-estilo="vidro"] .proc {
+  box-shadow: var(--sombra), inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+:root[data-estilo="vidro"] .ag-item { background: var(--superficie-2); border-color: transparent; }
+:root[data-estilo="vidro"] .ag-item:hover { background: var(--superficie); }
+:root[data-estilo="vidro"] .btn, :root[data-estilo="vidro"] .btn-ouro, :root[data-estilo="vidro"] .seg, :root[data-estilo="vidro"] .busca { border-radius: 999px; }
+:root[data-estilo="vidro"] .btn { box-shadow: 0 6px 16px color-mix(in srgb, var(--acento) 30%, transparent); }
+:root[data-estilo="vidro"] .btn-sec { background: var(--superficie); box-shadow: none; }
+:root[data-estilo="vidro"] .btn-ouro { background: linear-gradient(135deg, var(--luz), var(--ouro)); border: 0; color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--luz) 40%, transparent); }
+:root[data-estilo="vidro"] .gaveta { background: var(--superficie); }
+:root[data-estilo="vidro"] .gaveta-rodape, :root[data-estilo="vidro"] .gaveta-cab { background: transparent; }
+:root[data-estilo="vidro"] .destaque { border-radius: var(--raio); box-shadow: 0 16px 40px color-mix(in srgb, var(--destaque-1) 35%, transparent); }
+
+/* ícones arredondados com brilho */
+:root[data-estilo="vidro"] .kpi-ic {
+  width: 46px; height: 46px; border-radius: 50%; color: #fff;
+  background: linear-gradient(140deg, var(--destaque-brilho), var(--acento) 70%);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--acento) 35%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45), inset 0 -3px 6px rgba(0, 0, 0, .12);
+}
+:root[data-estilo="vidro"] .kpi:nth-child(2) .kpi-ic, :root[data-estilo="vidro"] .kpi:nth-child(4) .kpi-ic {
+  background: linear-gradient(140deg, #ffb37a, var(--luz) 70%);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--luz) 40%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45), inset 0 -3px 6px rgba(0, 0, 0, .12);
+}
+:root[data-estilo="vidro"] .kpi-ic .ic { width: 21px; height: 21px; }
+:root[data-estilo="vidro"] .nav-item .ic, :root[data-estilo="vidro"] .nm-item .ic {
+  width: 34px; height: 34px; padding: 8px; border-radius: 50%;
+  background: var(--superficie); box-shadow: 0 3px 8px rgba(20, 30, 70, .08), inset 0 1px 0 rgba(255, 255, 255, .7); opacity: 1;
+}
+:root[data-estilo="vidro"] .nav-item { padding: 6px 10px; border-radius: 999px; }
+:root[data-estilo="vidro"] .nav-item.ativo { background: var(--superficie); box-shadow: 0 6px 18px rgba(20, 30, 70, .08); }
+:root[data-estilo="vidro"] .nav-item.ativo::before { display: none; }
+:root[data-estilo="vidro"] .nav-item.ativo .ic, :root[data-estilo="vidro"] .nm-item.ativo .ic {
+  color: #fff; background: linear-gradient(140deg, var(--destaque-brilho), var(--acento) 70%);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--acento) 40%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45);
+}
+:root[data-estilo="vidro"] .marca-ic { border-radius: 50%; color: #fff; background: linear-gradient(140deg, #ffb37a, var(--luz) 70%); box-shadow: 0 6px 14px color-mix(in srgb, var(--luz) 40%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45); }
+:root[data-estilo="vidro"] .destaque-ic, :root[data-estilo="vidro"] .vazio-ic { border-radius: 50%; }
+:root[data-estilo="vidro"] .btn-icone { border-radius: 50%; background: var(--superficie); }
+:root[data-estilo="vidro"] .dia { border-radius: 16px; background: var(--superficie); border-color: transparent; box-shadow: 0 3px 8px rgba(20, 30, 70, .06); }
+@media (max-width: 860px) { :root[data-estilo="vidro"] .nm-item .ic { width: 32px; height: 32px; padding: 7px; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-estilo="vidro"] { --superficie: #ffffff; }
+}
