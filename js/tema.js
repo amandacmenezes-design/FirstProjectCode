@@ -2,22 +2,34 @@
 // Cada paleta define os tons do tema claro e do escuro; o restante da interface
 // (superfícies, textos, cores de situação) vem de css/style.css.
 
-// Estilo vidro escuro: base azul-marinho com uma cor de destaque.
+// Estilo vidro escuro: base neutra (preto ou grafite) e a cor reservada aos destaques.
 function vidro(nome, c) {
   const t = {
-    acento: '#5b8cf0', acentoTinta: '#ffffff', suave: 'rgba(91, 140, 240, .16)', fundo: '#12234a', lateral: '#0c1834',
-    lateralBg: 'rgba(8, 16, 38, .55)', lateral2: 'rgba(255, 255, 255, .07)', lateralTinta: '#b4c1dc', lateralForte: '#ffffff', lateralBorda: 'rgba(160, 185, 255, .14)',
-    ouro: c.forte, d1: '#2a56b8', d2: '#13295e', brilho: '#5b8cf0', luz: c.luz, luzClaro: c.claro, luzTinta: c.tinta,
-    fundoImagem: `radial-gradient(at 8% 6%, #2b55ad 0, transparent 42%), radial-gradient(at 92% 8%, ${c.reflexo} 0, transparent 38%), radial-gradient(at 78% 92%, #2c3d93 0, transparent 48%), radial-gradient(at 8% 96%, #1a4b86 0, transparent 40%), #12234a`,
-    superficie: 'rgba(255, 255, 255, .075)', superficie2: 'rgba(255, 255, 255, .055)', linha: 'rgba(170, 195, 255, .14)', vidroBorda: 'rgba(190, 210, 255, .18)', vidroBrilho: 'rgba(255, 255, 255, .10)',
+    acento: c.acento, acentoTinta: c.acentoTinta, suave: c.suave, fundo: c.base, lateral: c.lateral,
+    lateralBg: 'rgba(255, 255, 255, .025)', lateral2: 'rgba(255, 255, 255, .07)', lateralTinta: '#a3a8b4', lateralForte: '#ffffff', lateralBorda: 'rgba(255, 255, 255, .08)',
+    ouro: c.forte, d1: c.d1, d2: c.d2, brilho: c.acentoClaro, luz: c.luz, luzClaro: c.luzClaro, luzTinta: c.luzTinta,
+    fundoImagem: `radial-gradient(at 12% 0%, ${c.brilho1} 0, transparent 42%), radial-gradient(at 95% 12%, ${c.brilho2} 0, transparent 38%), radial-gradient(at 70% 100%, ${c.brilho1} 0, transparent 45%), ${c.base}`,
+    superficie: 'rgba(255, 255, 255, .06)', superficie2: 'rgba(255, 255, 255, .04)', linha: 'rgba(255, 255, 255, .09)', vidroBorda: 'rgba(255, 255, 255, .11)', vidroBrilho: 'rgba(255, 255, 255, .08)',
   };
   return { nome, estilo: 'vidro', sempreEscuro: true, claro: t, escuro: t };
 }
 
 const VIDROS = {
-  vidro: vidro('Vidro · azul e turquesa', { luz: '#2ccfe0', claro: '#7ee8f2', forte: '#13a7ba', tinta: '#04252c', reflexo: '#0f5f70' }),
-  vidroDourado: vidro('Vidro · azul e dourado', { luz: '#e0b24a', claro: '#f3d58a', forte: '#b98a2b', tinta: '#2a1d05', reflexo: '#5a4416' }),
-  vidroLilas: vidro('Vidro · azul e lilás', { luz: '#b39bff', claro: '#d6c9ff', forte: '#8a6cf0', tinta: '#1c1240', reflexo: '#46338f' }),
+  vidro: vidro('Vidro · preto e azul', {
+    base: '#0b0c10', lateral: '#08090c', acento: '#4d8dff', acentoClaro: '#8fb6ff', acentoTinta: '#ffffff', suave: 'rgba(77, 141, 255, .16)',
+    d1: '#2f6fe8', d2: '#16357d', luz: '#2ccfe0', luzClaro: '#7ee8f2', forte: '#13a7ba', luzTinta: '#04252c',
+    brilho1: 'rgba(77, 141, 255, .20)', brilho2: 'rgba(44, 207, 224, .13)',
+  }),
+  vidroGrafite: vidro('Vidro · grafite e turquesa', {
+    base: '#15171c', lateral: '#0e1013', acento: '#2ccfe0', acentoClaro: '#7ee8f2', acentoTinta: '#04252c', suave: 'rgba(44, 207, 224, .15)',
+    d1: '#138fa1', d2: '#0a434d', luz: '#8b98ff', luzClaro: '#bcc4ff', forte: '#5b6cf0', luzTinta: '#11163a',
+    brilho1: 'rgba(44, 207, 224, .16)', brilho2: 'rgba(139, 152, 255, .14)',
+  }),
+  vidroOuro: vidro('Vidro · preto e dourado', {
+    base: '#0c0b0a', lateral: '#080706', acento: '#e0b24a', acentoClaro: '#f3d58a', acentoTinta: '#2a1d05', suave: 'rgba(224, 178, 74, .15)',
+    d1: '#a8791f', d2: '#3d2b0c', luz: '#e8dcc2', luzClaro: '#f6efe0', forte: '#c9b48a', luzTinta: '#2a2112',
+    brilho1: 'rgba(224, 178, 74, .16)', brilho2: 'rgba(232, 220, 194, .08)',
+  }),
 };
 
 export const PALETAS = {
