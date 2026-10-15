@@ -5,8 +5,8 @@
 export const PALETAS = {
   azul: {
     nome: 'Azul e laranja',
-    claro: { acento: '#1f5fbf', suave: '#e4edfb', fundo: '#f1f4f9', lateral: '#0c2547', lateral2: '#163a6b', lateralTinta: '#b8c8e2', ouro: '#d9701a', d1: '#0f2f5c', d2: '#0a1f3d', brilho: '#2b6fd1', luz: '#ff9a3c' },
-    escuro: { acento: '#7fb0ff', suave: '#172a48', fundo: '#0a1220', lateral: '#060d1a', lateral2: '#13284a', d1: '#0f2a52', d2: '#081a33', brilho: '#1f4f99', luz: '#ff9a3c' },
+    claro: { acento: '#163f80', suave: '#e2e9f5', fundo: '#eef1f6', lateral: '#081a33', lateral2: '#10294f', lateralTinta: '#b3c1d8', ouro: '#c2560f', d1: '#0b2347', d2: '#06152c', brilho: '#1a4a8f', luz: '#dd6a17' },
+    escuro: { acento: '#6f9ce6', suave: '#142540', fundo: '#090f1b', lateral: '#050b16', lateral2: '#0f2242', d1: '#0b2347', d2: '#06152c', brilho: '#18427f', luz: '#e0701a' },
   },
   jade: {
     nome: 'Jade',
