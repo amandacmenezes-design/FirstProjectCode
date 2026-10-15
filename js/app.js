@@ -3,6 +3,7 @@ import { PRESETS } from './feriados.js';
 import { PRAZOS_USUAIS, calcularPrazo, criarCalendario, situacao } from './prazos.js';
 import { analisarNumeroCnj } from './cnj.js';
 import { buscarComunicacoes, sugerirPrazo } from './djen.js';
+import { APARENCIA_PADRAO, FONTES, PALETAS, cssDoTema } from './tema.js';
 import { carregar, estadoVazio, normalizar, novoId, salvar } from './store.js';
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -114,69 +115,145 @@ function vazio(titulo, dica, acao = '') {
 }
 
 // ---------- painel ----------
+function inicioDaSemana(iso) {
+  const dow = diaSemana(iso);
+  return addDias(iso, dow === 0 ? -6 : 1 - dow);
+}
+
+function graficoSemanas(abertos, hoje) {
+  const semanas = [];
+  const base = inicioDaSemana(hoje);
+  for (let k = 0; k < 8; k += 1) {
+    const ini = addDias(base, k * 7);
+    const fim = addDias(ini, 6);
+    const n = abertos.filter((p) => p.calc.vencimento >= ini && p.calc.vencimento <= fim).length;
+    semanas.push({ ini, fim, n });
+  }
+  const max = Math.max(...semanas.map((x) => x.n));
+  if (!max) return '<div class="grafico-vazio">Nenhum prazo em aberto vence nas próximas oito semanas.</div>';
+  const topo = Math.max(2, Math.ceil(max / 2) * 2);
+  const W = 560, H = 210, esq = 30, base_ = 180, alto = 160, larg = (W - esq) / 8;
+  const y = (v) => base_ - (v / topo) * alto;
+  const ticks = [0, topo / 2, topo];
+  const barras = semanas.map((x, k) => {
+    const bw = Math.min(38, larg * 0.56);
+    const bx = esq + k * larg + (larg - bw) / 2;
+    const rot = k === 0 ? 'Atual' : `${x.ini.slice(8)}/${x.ini.slice(5, 7)}`;
+    const tip = `Semana de ${formatar(x.ini)} a ${formatar(x.fim)}: ${plural(x.n, 'prazo', 'prazos')}`;
+    let barra;
+    if (x.n) {
+      const h = base_ - y(x.n);
+      const r = Math.min(4, h);
+      barra = `<path class="barra" tabindex="0" data-tip="${tip}" aria-label="${tip}" d="M${bx},${base_} V${base_ - h + r} Q${bx},${base_ - h} ${bx + r},${base_ - h} H${bx + bw - r} Q${bx + bw},${base_ - h} ${bx + bw},${base_ - h + r} V${base_} Z"/>
+        <text class="valor" x="${bx + bw / 2}" y="${base_ - h - 6}" text-anchor="middle">${x.n}</text>`;
+    } else {
+      barra = `<rect class="barra-vazia" x="${bx}" y="${base_ - 3}" width="${bw}" height="3" rx="1.5" tabindex="0" data-tip="${tip}" aria-label="${tip}"/>`;
+    }
+    return `${barra}<text x="${bx + bw / 2}" y="${base_ + 18}" text-anchor="middle">${rot}</text>`;
+  }).join('');
+  const grade = ticks.map((t) => `<line class="grade" x1="${esq}" x2="${W}" y1="${y(t)}" y2="${y(t)}"/><text x="${esq - 8}" y="${y(t) + 4}" text-anchor="end">${t}</text>`).join('');
+  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prazos em aberto por semana de vencimento">${grade}${barras}</svg>`;
+}
+
+function medidor(cumpridos, total) {
+  if (!total) return '<div class="grafico-vazio">Os prazos cadastrados aparecerão aqui.</div>';
+  const pct = Math.round((cumpridos / total) * 100);
+  const r = 80, cx = 100, cy = 100, comp = Math.PI * r;
+  return `<div class="medidor">
+    <svg viewBox="0 0 200 112" role="img" aria-label="${pct}% dos prazos cumpridos">
+      <path class="trilho-g" d="M${cx - r},${cy} A${r},${r} 0 0 1 ${cx + r},${cy}" fill="none" stroke-width="16" stroke-linecap="round"/>
+      <path class="arco-g" d="M${cx - r},${cy} A${r},${r} 0 0 1 ${cx + r},${cy}" fill="none" stroke-width="16" stroke-linecap="round" stroke-dasharray="${(comp * pct) / 100} ${comp}"/>
+    </svg>
+    <div class="medidor-n">${pct}%</div>
+    <div class="medidor-l">${cumpridos} de ${plural(total, 'prazo cadastrado', 'prazos cadastrados')} com baixa</div>
+  </div>`;
+}
+
+function listaAreas() {
+  if (!estado.processos.length) return '<div class="grafico-vazio">Cadastre processos para ver a distribuição por área.</div>';
+  const cont = new Map();
+  estado.processos.forEach((p) => { const a = (p.area || '').trim() || 'Sem área definida'; cont.set(a, (cont.get(a) || 0) + 1); });
+  const lista = [...cont.entries()].sort((a, b) => b[1] - a[1]);
+  const max = lista[0][1];
+  return `<ul class="areas">${lista.slice(0, 6).map(([a, n]) => `
+    <li data-tip="${esc(a)}: ${plural(n, 'processo', 'processos')}">
+      <div class="linha-a"><span>${esc(a)}</span><b>${n}</b></div>
+      <div class="barra-a"><i style="width:${(n / max) * 100}%"></i></div>
+    </li>`).join('')}</ul>`;
+}
+
 function telaPainel() {
   const itens = itensAgenda();
-  const prazos = itens.filter((i) => i.tipo === 'prazo');
-  const n = {
-    vencido: prazos.filter((i) => i.sit.faltam < 0).length,
-    hoje: prazos.filter((i) => i.sit.faltam === 0).length,
-    semana: prazos.filter((i) => i.sit.faltam > 0 && i.sit.faltam <= 7).length,
-    tarefa: itens.filter((i) => i.tipo === 'tarefa').length,
-  };
-  const proximo = prazos.find((i) => i.sit.faltam >= 0);
+  const hoje = hojeIso();
+  const cal = calendario();
+  const calc = estado.prazos.map((p) => comCalculo(p, cal)).filter((p) => p.calc);
+  const abertos = calc.filter((p) => !p.cumprido);
+  const cumpridos = calc.filter((p) => p.cumprido);
+  const vencidos = abertos.filter((p) => p.calc.vencimento < hoje).length;
+  const emSete = abertos.filter((p) => p.calc.vencimento >= hoje && p.calc.vencimento <= addDias(hoje, 7)).length;
+  const tarefasAbertas = estado.tarefas.filter((t) => !t.concluida);
+  const tarefasAtrasadas = tarefasAbertas.filter((t) => t.data && t.data < hoje).length;
+  const procComPrazo = new Set(abertos.map((p) => p.processoId).filter(Boolean)).size;
+  const proximo = itens.find((i) => i.tipo === 'prazo' && i.sit.faltam >= 0);
+
+  const kpi = (icone, rotulo, valor, detalhe, acao, valorAcao, barra) => `
+    <button class="kpi" data-acao="${acao}" data-valor="${valorAcao}">
+      <span class="kpi-topo"><span class="kpi-rotulo">${rotulo}</span><span class="kpi-ic">${ic(icone)}</span></span>
+      <span class="kpi-n">${valor}</span>
+      ${barra !== undefined ? `<span class="kpi-barra"><i style="width:${barra}%"></i></span>` : ''}
+      <span class="kpi-det">${detalhe}</span>
+    </button>`;
 
   let destaque;
-  if (n.vencido) {
-    destaque = `
-      <div class="destaque destaque-alerta">
-        <div class="destaque-ic">${ic('alerta')}</div>
-        <div class="destaque-corpo"><span class="eyebrow">Atenção</span><strong class="destaque-titulo">${plural(n.vencido, 'prazo vencido', 'prazos vencidos')} sem baixa</strong><span>Confira se já foram cumpridos e dê baixa, ou tome as providências cabíveis.</span></div>
-        <button class="btn btn-claro" data-acao="filtro-agenda" data-valor="vencido">Ver vencidos</button>
-      </div>`;
+  if (vencidos) {
+    destaque = `<div class="destaque destaque-alerta coluna">
+      <div class="destaque-ic">${ic('alerta')}</div>
+      <div class="destaque-corpo"><span class="eyebrow">Atenção</span><strong class="destaque-titulo">${plural(vencidos, 'prazo vencido', 'prazos vencidos')} sem baixa</strong><span>Confira se já foram cumpridos e dê baixa, ou tome as providências cabíveis.</span></div>
+      <button class="btn btn-claro" data-acao="filtro-agenda" data-valor="vencido">Ver vencidos</button></div>`;
   } else if (proximo) {
-    destaque = `
-      <div class="destaque">
-        <div class="destaque-data"><span class="destaque-dia">${proximo.data.slice(8)}</span><span>${MESES_CURTO[Number(proximo.data.slice(5, 7)) - 1]} · ${nomeDiaSemana(proximo.data, true)}</span></div>
-        <div class="destaque-corpo"><span class="eyebrow">Próximo vencimento · ${esc(proximo.sit.rotulo.toLowerCase())}</span><strong class="destaque-titulo">${esc(proximo.titulo)}</strong><span class="destaque-proc">${rotuloProcesso(proximo.processoId) || 'Sem processo vinculado'}</span></div>
-        <button class="btn btn-claro" data-acao="cumprir" data-id="${proximo.id}">${ic('check')}Dar baixa</button>
-      </div>`;
-  } else if (!estado.processos.length && !estado.prazos.length) {
-    destaque = `
-      <div class="destaque">
-        <div class="destaque-ic">${ic('balanca')}</div>
-        <div class="destaque-corpo"><span class="eyebrow">Primeiros passos</span><strong class="destaque-titulo">Cadastre seu primeiro prazo</strong><span>Clique em “Novo prazo”, digite o número do processo e busque a publicação no DJEN. O processo é cadastrado automaticamente.</span></div>
-        <button class="btn btn-claro" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>
-      </div>`;
+    destaque = `<div class="destaque coluna">
+      <div class="destaque-data"><span class="destaque-dia">${proximo.data.slice(8)}</span><span>${MESES_CURTO[Number(proximo.data.slice(5, 7)) - 1]} · ${nomeDiaSemana(proximo.data, true)}</span></div>
+      <div class="destaque-corpo"><span class="eyebrow">Próximo vencimento · ${esc(proximo.sit.rotulo.toLowerCase())}</span><strong class="destaque-titulo">${esc(proximo.titulo)}</strong><span class="destaque-proc">${rotuloProcesso(proximo.processoId) || 'Sem processo vinculado'}</span></div>
+      <button class="btn btn-claro" data-acao="cumprir" data-id="${proximo.id}">${ic('check')}Dar baixa</button></div>`;
   } else {
-    destaque = `
-      <div class="destaque">
-        <div class="destaque-ic">${ic('check')}</div>
-        <div class="destaque-corpo"><span class="eyebrow">Tudo em dia</span><strong class="destaque-titulo">Nenhum prazo pendente</strong><span>Cadastre um prazo para acompanhá-lo por aqui.</span></div>
-        <button class="btn btn-claro" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>
-      </div>`;
+    const vazio_ = !estado.processos.length && !estado.prazos.length;
+    destaque = `<div class="destaque coluna">
+      <div class="destaque-ic">${ic(vazio_ ? 'balanca' : 'check')}</div>
+      <div class="destaque-corpo"><span class="eyebrow">${vazio_ ? 'Primeiros passos' : 'Tudo em dia'}</span><strong class="destaque-titulo">${vazio_ ? 'Cadastre seu primeiro prazo' : 'Nenhum prazo pendente'}</strong><span>${vazio_ ? 'Clique em “Novo prazo”, digite o número do processo e busque a publicação no DJEN.' : 'Cadastre um prazo para acompanhá-lo por aqui.'}</span></div>
+      <button class="btn btn-claro" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button></div>`;
   }
-
-  const stat = (chave, numero, rotulo, tom) => `
-    <button class="stat ${numero && tom ? 'stat-' + tom : ''} ${ui.filtroAgenda === chave ? 'ativo' : ''}" data-acao="filtro-agenda" data-valor="${chave}" aria-pressed="${ui.filtroAgenda === chave}">
-      <span class="stat-n">${numero}</span><span class="stat-l">${rotulo}</span>
-    </button>`;
 
   const filtrados = itens.filter((i) => {
     if (!ui.filtroAgenda) return true;
     if (ui.filtroAgenda === 'tarefa') return i.tipo === 'tarefa';
-    if (ui.filtroAgenda === 'semana') return i.tipo === 'prazo' && i.sit.faltam > 0 && i.sit.faltam <= 7;
     return i.tipo === 'prazo' && GRUPOS.find(([k]) => k === ui.filtroAgenda)[2](i.sit.faltam);
   });
-
   const grupos = GRUPOS.map(([k, rotulo, teste]) => [k, rotulo, filtrados.filter((i) => teste(i.sit.faltam))]).filter(([, , l]) => l.length);
+  const total = calc.length;
 
   return `
-    ${destaque}
-    <div class="stats">
-      ${stat('vencido', n.vencido, 'Vencidos', 'vencido')}
-      ${stat('hoje', n.hoje, 'Vencem hoje', 'hoje')}
-      ${stat('semana', n.semana, 'Em 7 dias', '')}
-      ${stat('tarefa', n.tarefa, 'Tarefas abertas', '')}
+    <section class="kpis" aria-label="Indicadores">
+      ${kpi('processos', 'Processos cadastrados', estado.processos.length, procComPrazo ? `${procComPrazo} com prazo em aberto` : 'Nenhum com prazo em aberto', 'ir', 'processos')}
+      ${kpi('prazos', 'Prazos em aberto', abertos.length, vencidos ? `<span class="chip chip-vencido">${vencidos} vencido${vencidos > 1 ? 's' : ''}</span>` : emSete ? `<span class="chip chip-urgente">${emSete} em 7 dias</span>` : 'Nenhum vence em 7 dias', 'ir-prazos', 'pendentes')}
+      ${kpi('check', 'Prazos concluídos', cumpridos.length, total ? `${Math.round((cumpridos.length / total) * 100)}% do total cadastrado` : 'Nenhum prazo cadastrado', 'ir-prazos', 'cumpridos', total ? Math.round((cumpridos.length / total) * 100) : 0)}
+      ${kpi('tarefas', 'Tarefas em aberto', tarefasAbertas.length, tarefasAtrasadas ? `<span class="chip chip-vencido">${tarefasAtrasadas} atrasada${tarefasAtrasadas > 1 ? 's' : ''}</span>` : 'Nenhuma atrasada', 'ir', 'tarefas')}
+    </section>
+    <div class="graficos">
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Vencimentos nas próximas semanas</h2><span class="sub">Prazos em aberto, por semana</span></header>
+        ${graficoSemanas(abertos, hoje)}
+      </section>
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Prazos com baixa</h2></header>
+        ${medidor(cumpridos.length, total)}
+      </section>
+    </div>
+    <div class="graficos-2">
+      ${destaque}
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Processos por área</h2><span class="sub">${plural(estado.processos.length, 'processo', 'processos')}</span></header>
+        ${listaAreas()}
+      </section>
     </div>
     <div class="grade-painel">
       <section class="cartao">
@@ -382,6 +459,22 @@ function telaAjustes() {
   const feriados = calendario().feriadosDoAno(ano);
   return `
     <div class="ajustes">
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Aparência</h2><span class="sub">A escolha vale na hora</span></header>
+        <h3 class="sub-titulo">Cores</h3>
+        <div class="temas">${Object.entries(PALETAS).map(([k, p]) => `
+          <button class="tema ${aparencia().paleta === k ? 'ativo' : ''}" data-acao="paleta" data-valor="${k}" aria-pressed="${aparencia().paleta === k}" style="--p-acento:${p.claro.acento};--p-luz:${p.claro.luz}">
+            <span class="tema-previa"><span class="tl" style="background:${p.claro.lateral}"><i></i><i></i><i></i></span><span class="tc" style="background:${p.claro.fundo}"><i style="height:40%"></i><i style="height:85%"></i><i style="height:60%"></i></span></span>
+            <span class="tema-nome">${esc(p.nome)}${aparencia().paleta === k ? ic('check') : ''}</span>
+          </button>`).join('')}</div>
+        <h3 class="sub-titulo">Fonte</h3>
+        <div class="fontes">${Object.entries(FONTES).map(([k, f]) => `
+          <button class="fonte-op ${aparencia().fonte === k ? 'ativo' : ''}" data-acao="fonte" data-valor="${k}" aria-pressed="${aparencia().fonte === k}">
+            <small>${esc(f.nome)} · ${esc(f.descricao)}</small>
+            <span class="amostra-t" style="font-family:${f.titulo}">Contestação · 15 dias úteis</span>
+            <span class="amostra-c" style="font-family:${f.texto}">Vence em 09/11/2026, segunda-feira.</span>
+          </button>`).join('')}</div>
+      </section>
       <section class="cartao">
         <header class="cartao-cab"><h2>Preferências</h2></header>
         <form id="form-nome" class="form" autocomplete="off">
@@ -645,7 +738,19 @@ function contadores() {
   };
 }
 
+function aparencia() {
+  return { ...APARENCIA_PADRAO, ...(estado.config.aparencia || {}) };
+}
+
+function aplicarTema() {
+  let el = document.getElementById('tema-painel');
+  if (!el) { el = document.createElement('style'); el.id = 'tema-painel'; document.head.append(el); }
+  const css = cssDoTema(aparencia());
+  if (el.textContent !== css) el.textContent = css;
+}
+
 function render() {
+  aplicarTema();
   const tela = ABAS.find(([k]) => k === ui.aba)[2];
   const cab = cabecalho();
   const cont = contadores();
@@ -748,7 +853,10 @@ app.addEventListener('click', async (ev) => {
       render();
       break;
     }
-    case 'cumprir': acharPrazo().cumprido = true; persistir('Baixa registrada no prazo.'); break;
+    case 'cumprir': Object.assign(acharPrazo(), { cumprido: true, cumpridoEm: hojeIso() }); persistir('Baixa registrada no prazo.'); break;
+    case 'ir-prazos': ui.aba = 'prazos'; ui.filtroPrazos = valor; render(); window.scrollTo(0, 0); break;
+    case 'paleta': estado.config.aparencia = { ...aparencia(), paleta: valor }; persistir('Cores aplicadas.'); break;
+    case 'fonte': estado.config.aparencia = { ...aparencia(), fonte: valor }; persistir('Fonte aplicada.'); break;
     case 'reabrir': acharPrazo().cumprido = false; persistir('Prazo reaberto.'); break;
     case 'concluir': estado.tarefas.find((t) => t.id === id).concluida = true; persistir('Tarefa concluída.'); break;
     case 'excluir-prazo': if (confirmar(b)) { estado.prazos = estado.prazos.filter((p) => p.id !== id); persistir('Prazo excluído.'); } break;
@@ -825,6 +933,26 @@ app.addEventListener('input', (ev) => {
     atualizarResultado();
   }
 });
+
+const tip = document.createElement('div');
+tip.id = 'tip';
+tip.hidden = true;
+document.body.append(tip);
+function mostrarTip(ev) {
+  const alvo = ev.target.closest?.('[data-tip]');
+  if (!alvo) { tip.hidden = true; return; }
+  tip.textContent = alvo.dataset.tip;
+  tip.hidden = false;
+  const r = alvo.getBoundingClientRect();
+  const x = ev.clientX ?? r.left + r.width / 2;
+  const y = ev.clientY ?? r.top;
+  tip.style.left = `${Math.min(window.innerWidth - tip.offsetWidth - 8, Math.max(8, x - tip.offsetWidth / 2))}px`;
+  tip.style.top = `${Math.max(8, y - tip.offsetHeight - 12)}px`;
+}
+app.addEventListener('mousemove', mostrarTip);
+app.addEventListener('focusin', mostrarTip);
+app.addEventListener('mouseleave', () => { tip.hidden = true; });
+app.addEventListener('focusout', () => { tip.hidden = true; });
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter' && ev.target.id === 'pz-numero') { ev.preventDefault(); buscarDjen(); return; }

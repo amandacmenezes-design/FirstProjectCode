@@ -4,7 +4,7 @@ Ferramenta interna para cadastro de processos judiciais, cálculo automático de
 
 ## O que faz
 
-O painel reúne, em ordem cronológica, os prazos e as tarefas pendentes, destacando os vencidos, os que vencem hoje e os que vencem em até sete dias. Na aba **Prazos**, a calculadora apura o termo final a partir da data do marco inicial e mostra a memória de cálculo dia a dia, com a indicação de cada dia excluído e do motivo.
+A página inicial mostra indicadores (processos cadastrados, prazos em aberto e concluídos, tarefas em aberto), um gráfico de vencimentos por semana, o percentual de prazos com baixa e a distribuição dos processos por área. Abaixo, o painel reúne, em ordem cronológica, os prazos e as tarefas pendentes, destacando os vencidos, os que vencem hoje e os que vencem em até sete dias. Na aba **Prazos**, a calculadora apura o termo final a partir da data do marco inicial e mostra a memória de cálculo dia a dia, com a indicação de cada dia excluído e do motivo.
 
 Regras implementadas:
 
@@ -62,7 +62,8 @@ js/feriados.js              Páscoa, feriados nacionais e regionais, recesso
 js/prazos.js                calendário forense e cálculo de prazos
 js/cnj.js                   validação do número CNJ
 js/djen.js                  consulta ao DJEN e sugestão de prazo
-js/store.js                 armazenamento local e dados de exemplo
+js/store.js                 armazenamento local
+js/tema.js                  paletas de cores e fontes (Ajustes → Aparência)
 js/app.js                   interface
 tests/*.test.mjs            testes automatizados
 teste-djen.html             diagnóstico da API do DJEN

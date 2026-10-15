@@ -10,7 +10,7 @@ const ler = (p) => readFileSync(join(raiz, p), 'utf8');
 
 // Ordem de dependência dos módulos. Os nomes de topo são únicos entre os arquivos,
 // então basta remover as linhas de import e a palavra "export".
-const MODULOS = ['js/datas.js', 'js/feriados.js', 'js/cnj.js', 'js/prazos.js', 'js/djen.js', 'js/store.js', 'js/app.js'];
+const MODULOS = ['js/datas.js', 'js/feriados.js', 'js/cnj.js', 'js/prazos.js', 'js/djen.js', 'js/tema.js', 'js/store.js', 'js/app.js'];
 const js = MODULOS.map((m) => `// ---- ${m} ----\n` + ler(m)
   .split('\n')
   .filter((l) => !/^import\s.+from\s.+;$/.test(l))
