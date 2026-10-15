@@ -562,3 +562,4 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
 :root[data-estilo="vidro"] .cal-dia.feriado { color: var(--luz-claro, var(--luz)); background: color-mix(in srgb, var(--luz) 24%, transparent); }
 :root[data-estilo="vidro"] .ponto-tarefa { background: var(--luz-claro, var(--luz)); }
 :root[data-estilo="vidro"] .legenda-g i { background: var(--grafico); }
+:root[data-estilo="vidro"] .chip-futuro, :root[data-estilo="vidro"] .chip-proximo, :root[data-estilo="vidro"] .tag-prazo, :root[data-estilo="vidro"] .link, :root[data-estilo="vidro"] .gh-link, :root[data-estilo="vidro"] details > summary { color: var(--destaque-brilho); }
