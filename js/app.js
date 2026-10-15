@@ -1,34 +1,85 @@
-import { ISO_RE, addDias, formatar, hojeIso, nomeDiaSemana } from './datas.js';
+import { ISO_RE, addDias, criarIso, diaSemana, formatar, hojeIso, nomeDiaSemana } from './datas.js';
 import { PRESETS } from './feriados.js';
 import { PRAZOS_USUAIS, calcularPrazo, criarCalendario, situacao } from './prazos.js';
 import { analisarNumeroCnj } from './cnj.js';
 import { carregar, estadoExemplo, estadoVazio, normalizar, novoId, salvar } from './store.js';
 
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const MESES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
 let estado = carregar() || estadoExemplo();
-let aba = 'painel';
-let filtroPrazos = 'pendentes';
-let rascunho = { dataMarco: hojeIso(), marco: 'disponibilizacao', contagem: 'uteis', dias: 15, dobro: false, suspenderRecesso: true, descricao: '', processoId: '' };
+const ui = {
+  aba: 'painel',
+  gaveta: null, // 'prazo' | 'processo' | null
+  filtroAgenda: null,
+  filtroPrazos: 'pendentes',
+  buscaPrazos: '',
+  buscaProcessos: '',
+  mesCal: hojeIso().slice(0, 7),
+  diaSel: hojeIso(),
+  processoEdit: null,
+};
+let rascunho = rascunhoNovo();
 let mensagem = null;
+let mensagemErro = false;
 
 const app = document.getElementById('app');
 
+function rascunhoNovo(extra = {}) {
+  return { id: null, dataMarco: hojeIso(), marco: 'disponibilizacao', contagem: 'uteis', dias: 15, dobro: false, suspenderRecesso: true, descricao: '', processoId: '', ...extra };
+}
+
+// ---------- ícones ----------
+const ICONES = {
+  painel: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  prazos: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  processos: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  tarefas: '<path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>',
+  ajustes: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  mais: '<path d="M12 5v14M5 12h14"/>',
+  fechar: '<path d="M6 6l12 12M18 6L6 18"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  esq: '<path d="M15 6l-6 6 6 6"/>',
+  dir: '<path d="M9 6l6 6-6 6"/>',
+  busca: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  lixo: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
+  balanca: '<path d="M12 4v16M8 20h8M5 8h14M12 4l-1 4M5 8l-2.5 6a2.5 2.5 0 0 0 5 0zM19 8l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
+  alerta: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  editar: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
+};
+const ic = (nome, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES[nome]}</svg>`;
+
 // ---------- utilidades ----------
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const dataBonita = (iso) => (iso ? `<span class="data">${formatar(iso)}<small>${nomeDiaSemana(iso, true)}</small></span>` : '—');
 const calendario = () => criarCalendario(estado.config);
 const processo = (id) => estado.processos.find((p) => p.id === id);
-const rotuloProcesso = (id) => {
+const nomeUsuario = () => (estado.config.nome ?? 'Dra. Amanda').trim();
+const dataExtensa = (iso) => `${nomeDiaSemana(iso)}, ${Number(iso.slice(8))} de ${MESES[Number(iso.slice(5, 7)) - 1]}`;
+const blocoData = (iso) => `<div class="dia"><span class="dia-n">${iso.slice(8)}</span><span class="dia-m">${MESES_CURTO[Number(iso.slice(5, 7)) - 1]}</span><span class="dia-s">${nomeDiaSemana(iso, true)}</span></div>`;
+const chip = (sit) => `<span class="chip chip-${sit.chave}">${esc(sit.rotulo)}</span>`;
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+function rotuloProcesso(id, comCliente = true) {
   const p = processo(id);
-  return p ? `${esc(p.numero)}${p.cliente ? ` · ${esc(p.cliente)}` : ''}` : '';
-};
+  if (!p) return '';
+  return `<span class="mono">${esc(p.numero)}</span>${comCliente && p.cliente ? ` · ${esc(p.cliente)}` : ''}`;
+}
 
 function persistir(texto) {
   const ok = salvar(estado);
-  mensagem = ok ? texto : 'Não foi possível salvar neste navegador (armazenamento bloqueado). Exporte um backup antes de fechar.';
+  if (!ok) return avisar('Não foi possível salvar neste navegador. Gere um backup em Ajustes antes de fechar.');
+  mensagem = texto;
   render();
 }
 
-function prazoCalculado(p, cal = calendario()) {
+function avisar(texto) {
+  mensagem = texto;
+  mensagemErro = true;
+  render();
+}
+
+function comCalculo(p, cal = calendario()) {
   try {
     return { ...p, calc: calcularPrazo(p, cal) };
   } catch (e) {
@@ -39,274 +90,425 @@ function prazoCalculado(p, cal = calendario()) {
 function itensAgenda() {
   const hoje = hojeIso();
   const cal = calendario();
-  const prazos = estado.prazos.filter((p) => !p.cumprido).map((p) => prazoCalculado(p, cal)).filter((p) => p.calc)
+  const prazos = estado.prazos.filter((p) => !p.cumprido).map((p) => comCalculo(p, cal)).filter((p) => p.calc)
     .map((p) => ({ tipo: 'prazo', id: p.id, data: p.calc.vencimento, titulo: p.descricao || 'Prazo', processoId: p.processoId, sit: situacao(p.calc.vencimento, hoje) }));
   const tarefas = estado.tarefas.filter((t) => !t.concluida && ISO_RE.test(t.data || ''))
     .map((t) => ({ tipo: 'tarefa', id: t.id, data: t.data, titulo: t.titulo, processoId: t.processoId, prioridade: t.prioridade, sit: situacao(t.data, hoje) }));
-  return [...prazos, ...tarefas].sort((a, b) => a.data.localeCompare(b.data));
+  return [...prazos, ...tarefas].sort((a, b) => a.data.localeCompare(b.data) || (a.tipo === 'prazo' ? -1 : 1));
 }
 
-const pill = (sit) => `<span class="pill pill-${sit.chave}">${esc(sit.rotulo)}</span>`;
+const GRUPOS = [
+  ['vencido', 'Vencidos', (f) => f < 0],
+  ['hoje', 'Hoje', (f) => f === 0],
+  ['amanha', 'Amanhã', (f) => f === 1],
+  ['semana', 'Próximos 7 dias', (f) => f >= 2 && f <= 7],
+  ['depois', 'Mais adiante', (f) => f > 7],
+];
 
-// ---------- telas ----------
+function vazio(titulo, dica, acao = '') {
+  return `<div class="vazio">${ic('check', 'vazio-ic')}<strong>${esc(titulo)}</strong><span>${esc(dica)}</span>${acao}</div>`;
+}
+
+// ---------- painel ----------
 function telaPainel() {
   const itens = itensAgenda();
   const prazos = itens.filter((i) => i.tipo === 'prazo');
-  const conta = (f) => prazos.filter(f).length;
-  const vencidos = conta((i) => i.sit.chave === 'vencido');
-  const hoje = conta((i) => i.sit.chave === 'hoje');
-  const semana = conta((i) => i.sit.faltam > 0 && i.sit.faltam <= 7);
-  const tarefas = itens.filter((i) => i.tipo === 'tarefa').length;
+  const n = {
+    vencido: prazos.filter((i) => i.sit.faltam < 0).length,
+    hoje: prazos.filter((i) => i.sit.faltam === 0).length,
+    semana: prazos.filter((i) => i.sit.faltam > 0 && i.sit.faltam <= 7).length,
+    tarefa: itens.filter((i) => i.tipo === 'tarefa').length,
+  };
+  const proximo = prazos.find((i) => i.sit.faltam >= 0);
 
-  const cal = calendario();
-  const h = hojeIso();
-  const proximosFeriados = [];
-  for (let d = h, n = 0; n < 120 && proximosFeriados.length < 4; n += 1, d = addDias(d, 1)) {
-    const m = cal.motivo(d, { considerarRecesso: false });
-    const dow = new Date(d + 'T00:00:00Z').getUTCDay();
-    if (m && dow !== 0 && dow !== 6) proximosFeriados.push([d, m]);
+  let destaque;
+  if (n.vencido) {
+    destaque = `
+      <div class="destaque destaque-alerta">
+        <div class="destaque-ic">${ic('alerta')}</div>
+        <div class="destaque-corpo"><span class="eyebrow">Atenção</span><strong class="destaque-titulo">${plural(n.vencido, 'prazo vencido', 'prazos vencidos')} sem baixa</strong><span>Confira se já foram cumpridos e dê baixa, ou tome as providências cabíveis.</span></div>
+        <button class="btn btn-claro" data-acao="filtro-agenda" data-valor="vencido">Ver vencidos</button>
+      </div>`;
+  } else if (proximo) {
+    destaque = `
+      <div class="destaque">
+        <div class="destaque-data"><span class="destaque-dia">${proximo.data.slice(8)}</span><span>${MESES_CURTO[Number(proximo.data.slice(5, 7)) - 1]} · ${nomeDiaSemana(proximo.data, true)}</span></div>
+        <div class="destaque-corpo"><span class="eyebrow">Próximo vencimento · ${esc(proximo.sit.rotulo.toLowerCase())}</span><strong class="destaque-titulo">${esc(proximo.titulo)}</strong><span class="destaque-proc">${rotuloProcesso(proximo.processoId) || 'Sem processo vinculado'}</span></div>
+        <button class="btn btn-claro" data-acao="cumprir" data-id="${proximo.id}">${ic('check')}Dar baixa</button>
+      </div>`;
+  } else {
+    destaque = `
+      <div class="destaque">
+        <div class="destaque-ic">${ic('check')}</div>
+        <div class="destaque-corpo"><span class="eyebrow">Tudo em dia</span><strong class="destaque-titulo">Nenhum prazo pendente</strong><span>Cadastre um prazo para acompanhá-lo por aqui.</span></div>
+        <button class="btn btn-claro" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>
+      </div>`;
   }
 
+  const stat = (chave, numero, rotulo, tom) => `
+    <button class="stat ${numero && tom ? 'stat-' + tom : ''} ${ui.filtroAgenda === chave ? 'ativo' : ''}" data-acao="filtro-agenda" data-valor="${chave}" aria-pressed="${ui.filtroAgenda === chave}">
+      <span class="stat-n">${numero}</span><span class="stat-l">${rotulo}</span>
+    </button>`;
+
+  const filtrados = itens.filter((i) => {
+    if (!ui.filtroAgenda) return true;
+    if (ui.filtroAgenda === 'tarefa') return i.tipo === 'tarefa';
+    if (ui.filtroAgenda === 'semana') return i.tipo === 'prazo' && i.sit.faltam > 0 && i.sit.faltam <= 7;
+    return i.tipo === 'prazo' && GRUPOS.find(([k]) => k === ui.filtroAgenda)[2](i.sit.faltam);
+  });
+
+  const grupos = GRUPOS.map(([k, rotulo, teste]) => [k, rotulo, filtrados.filter((i) => teste(i.sit.faltam))]).filter(([, , l]) => l.length);
+
   return `
-    <section class="tiles" aria-label="Resumo">
-      <div class="tile ${vencidos ? 't-vencido' : ''}"><span class="tile-n">${vencidos}</span><span class="tile-l">Prazos vencidos</span></div>
-      <div class="tile ${hoje ? 't-hoje' : ''}"><span class="tile-n">${hoje}</span><span class="tile-l">Vencem hoje</span></div>
-      <div class="tile"><span class="tile-n">${semana}</span><span class="tile-l">Vencem em 7 dias</span></div>
-      <div class="tile"><span class="tile-n">${tarefas}</span><span class="tile-l">Tarefas abertas</span></div>
-    </section>
-    <div class="painel-grid">
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Agenda</h2><span class="sub">Prazos e tarefas pendentes, do mais antigo ao mais distante</span></header>
-        ${itens.length ? `<ol class="agenda">${itens.map(itemAgenda).join('')}</ol>` : vazio('Nenhum prazo ou tarefa pendente.', 'Cadastre um prazo na aba Prazos.')}
+    ${destaque}
+    <div class="stats">
+      ${stat('vencido', n.vencido, 'Vencidos', 'vencido')}
+      ${stat('hoje', n.hoje, 'Vencem hoje', 'hoje')}
+      ${stat('semana', n.semana, 'Em 7 dias', '')}
+      ${stat('tarefa', n.tarefa, 'Tarefas abertas', '')}
+    </div>
+    <div class="grade-painel">
+      <section class="cartao">
+        <header class="cartao-cab">
+          <h2>Agenda</h2>
+          ${ui.filtroAgenda ? `<button class="link" data-acao="filtro-agenda" data-valor="">Limpar filtro</button>` : `<span class="sub">${plural(itens.length, 'item pendente', 'itens pendentes')}</span>`}
+        </header>
+        ${grupos.length ? grupos.map(([k, rotulo, lista]) => `
+          <div class="grupo grupo-${k}">
+            <h3 class="grupo-titulo">${rotulo}<span>${lista.length}</span></h3>
+            <ul class="agenda">${lista.map(itemAgenda).join('')}</ul>
+          </div>`).join('') : vazio('Nada por aqui', ui.filtroAgenda ? 'Nenhum item corresponde a este filtro.' : 'Sem prazos ou tarefas pendentes.')}
       </section>
-      <aside class="bloco lateral">
-        <header class="bloco-cab"><h2>Próximos dias sem expediente</h2></header>
-        <ul class="feriados">${proximosFeriados.map(([d, m]) => `<li>${dataBonita(d)}<span>${esc(m)}</span></li>`).join('') || '<li class="sub">Nenhum nos próximos 120 dias.</li>'}</ul>
-        <p class="nota">Inclui feriados nacionais${estado.config.presets.length ? ', regionais selecionados' : ''} e suspensões cadastradas em Ajustes. O recesso de 20/12 a 20/01 é aplicado automaticamente.</p>
-      </aside>
+      <aside class="cartao">${miniCalendario(itens)}</aside>
     </div>`;
 }
 
 function itemAgenda(i) {
-  const acao = i.tipo === 'prazo'
-    ? `<button class="btn-sec" data-acao="cumprir" data-id="${i.id}">Cumprido</button>`
-    : `<button class="btn-sec" data-acao="concluir" data-id="${i.id}">Concluir</button>`;
+  const acao = i.tipo === 'prazo' ? 'cumprir' : 'concluir';
   return `
-    <li class="item sit-${i.sit.chave}">
-      <div class="item-data">${dataBonita(i.data)}</div>
-      <div class="item-corpo">
-        <div class="item-titulo"><span class="tipo">${i.tipo === 'prazo' ? 'Prazo' : 'Tarefa'}</span>${esc(i.titulo)}${i.prioridade === 'alta' ? ' <span class="pill pill-urgente">Alta</span>' : ''}</div>
-        ${i.processoId ? `<div class="item-proc">${rotuloProcesso(i.processoId)}</div>` : ''}
+    <li class="ag-item sit-${i.sit.chave}">
+      ${blocoData(i.data)}
+      <div class="ag-corpo">
+        <div class="ag-titulo"><span class="tag tag-${i.tipo}">${i.tipo === 'prazo' ? 'Prazo' : 'Tarefa'}</span>${esc(i.titulo)}${i.prioridade === 'alta' ? '<span class="chip chip-urgente">Prioridade alta</span>' : ''}</div>
+        ${i.processoId ? `<div class="ag-proc">${rotuloProcesso(i.processoId)}</div>` : ''}
       </div>
-      <div class="item-acoes">${pill(i.sit)}${acao}</div>
+      <div class="ag-lado">${chip(i.sit)}<button class="btn-icone" data-acao="${acao}" data-id="${i.id}" title="${i.tipo === 'prazo' ? 'Dar baixa no prazo' : 'Concluir tarefa'}" aria-label="${i.tipo === 'prazo' ? 'Dar baixa no prazo' : 'Concluir tarefa'}">${ic('check')}</button></div>
     </li>`;
 }
 
-function vazio(titulo, dica) {
-  return `<div class="vazio"><strong>${esc(titulo)}</strong><span>${esc(dica)}</span></div>`;
+function miniCalendario(itens) {
+  const [ano, mes] = ui.mesCal.split('-').map(Number);
+  const primeiro = criarIso(ano, mes, 1);
+  const inicio = addDias(primeiro, -diaSemana(primeiro));
+  const cal = calendario();
+  const hoje = hojeIso();
+  const porDia = new Map();
+  itens.forEach((i) => porDia.set(i.data, [...(porDia.get(i.data) || []), i]));
+
+  const celulas = [];
+  for (let d = inicio, k = 0; k < 42; k += 1, d = addDias(d, 1)) {
+    if (k === 35 && d.slice(0, 7) !== ui.mesCal) break;
+    const motivo = cal.motivo(d);
+    const dow = diaSemana(d);
+    const feriado = motivo && dow !== 0 && dow !== 6;
+    const doDia = porDia.get(d) || [];
+    const classes = ['cal-dia', d.slice(0, 7) !== ui.mesCal && 'fora', motivo && 'nao-util', feriado && 'feriado', d === hoje && 'hoje', d === ui.diaSel && 'sel'].filter(Boolean).join(' ');
+    celulas.push(`<button class="${classes}" data-acao="dia" data-valor="${d}" title="${esc(motivo || '')}" aria-label="${dataExtensa(d)}${motivo ? ', ' + esc(motivo) : ''}${doDia.length ? ', ' + plural(doDia.length, 'item', 'itens') : ''}">
+      <span>${Number(d.slice(8))}</span>
+      <span class="pontos">${doDia.slice(0, 3).map((i) => `<i class="ponto ponto-${i.tipo === 'tarefa' ? 'tarefa' : i.sit.chave}"></i>`).join('')}</span>
+    </button>`);
+  }
+
+  const sel = ui.diaSel;
+  const motivoSel = cal.motivo(sel);
+  const doSel = porDia.get(sel) || [];
+
+  return `
+    <header class="cartao-cab cal-cab">
+      <h2>${MESES[mes - 1][0].toUpperCase() + MESES[mes - 1].slice(1)} <span class="sub">${ano}</span></h2>
+      <div class="cal-nav">
+        <button class="btn-icone" data-acao="mes" data-valor="-1" aria-label="Mês anterior">${ic('esq')}</button>
+        <button class="link" data-acao="mes" data-valor="0">Hoje</button>
+        <button class="btn-icone" data-acao="mes" data-valor="1" aria-label="Próximo mês">${ic('dir')}</button>
+      </div>
+    </header>
+    <div class="cal-grade" role="grid">
+      ${['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => `<span class="cal-sem">${d}</span>`).join('')}
+      ${celulas.join('')}
+    </div>
+    <div class="cal-legenda"><span><i class="ponto ponto-vencido"></i>Vencido</span><span><i class="ponto ponto-urgente"></i>Até 3 dias</span><span><i class="ponto ponto-futuro"></i>Prazo</span><span><i class="ponto ponto-tarefa"></i>Tarefa</span></div>
+    <div class="cal-detalhe">
+      <strong>${dataExtensa(sel)}</strong>
+      ${motivoSel ? `<span class="sub">Sem expediente · ${esc(motivoSel)}</span>` : '<span class="sub">Dia útil</span>'}
+      ${doSel.length ? `<ul class="cal-itens">${doSel.map((i) => `<li><span class="tag tag-${i.tipo}">${i.tipo === 'prazo' ? 'Prazo' : 'Tarefa'}</span>${esc(i.titulo)}</li>`).join('')}</ul>` : ''}
+    </div>`;
 }
 
-function opcoesProcesso(selecionado, rotuloVazio = 'Sem processo vinculado') {
-  return `<option value="">${rotuloVazio}</option>` + estado.processos.map((p) => `<option value="${p.id}" ${p.id === selecionado ? 'selected' : ''}>${esc(p.numero)}${p.cliente ? ' · ' + esc(p.cliente) : ''}</option>`).join('');
+// ---------- prazos ----------
+function listaPrazos() {
+  const cal = calendario();
+  const hoje = hojeIso();
+  const busca = ui.buscaPrazos.trim().toLowerCase();
+  const lista = estado.prazos
+    .filter((p) => (ui.filtroPrazos === 'pendentes' ? !p.cumprido : ui.filtroPrazos === 'cumpridos' ? p.cumprido : true))
+    .filter((p) => !busca || `${p.descricao} ${processo(p.processoId)?.numero || ''} ${processo(p.processoId)?.cliente || ''}`.toLowerCase().includes(busca))
+    .map((p) => comCalculo(p, cal))
+    .sort((a, b) => (a.calc?.vencimento || '').localeCompare(b.calc?.vencimento || ''));
+  if (!lista.length) return vazio('Nenhum prazo encontrado', busca ? 'Tente outro termo de busca.' : 'Calcule e salve o primeiro prazo.', `<button class="btn" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>`);
+  return `<ul class="tabela">${lista.map((p) => {
+    const sit = p.calc && situacao(p.calc.vencimento, hoje);
+    return `
+    <li class="tab-linha ${p.cumprido ? 'feito' : sit ? 'sit-' + sit.chave : ''}">
+      ${p.calc ? blocoData(p.calc.vencimento) : '<div class="dia"></div>'}
+      <div class="tab-corpo">
+        <strong>${esc(p.descricao || 'Prazo')}</strong>
+        <span class="sub">${p.processoId ? rotuloProcesso(p.processoId) : 'Sem processo vinculado'}</span>
+        <span class="sub">${p.dias} dias ${p.contagem === 'uteis' ? 'úteis' : 'corridos'}${p.dobro ? ', em dobro' : ''} · ${p.marco === 'disponibilizacao' ? 'disponibilizado' : 'intimado'} em ${formatar(p.dataMarco)}</span>
+      </div>
+      <div class="tab-lado">
+        ${p.cumprido ? '<span class="chip chip-ok">Cumprido</span>' : sit ? chip(sit) : `<span class="chip chip-vencido">${esc(p.erro)}</span>`}
+        <div class="acoes">
+          <button class="btn-icone" data-acao="${p.cumprido ? 'reabrir' : 'cumprir'}" data-id="${p.id}" title="${p.cumprido ? 'Reabrir' : 'Dar baixa'}" aria-label="${p.cumprido ? 'Reabrir prazo' : 'Dar baixa no prazo'}">${ic(p.cumprido ? 'esq' : 'check')}</button>
+          <button class="btn-icone" data-acao="ver-prazo" data-id="${p.id}" title="Ver cálculo e editar" aria-label="Ver cálculo e editar">${ic('calc')}</button>
+          <button class="btn-icone perigo" data-acao="excluir-prazo" data-id="${p.id}" title="Excluir" aria-label="Excluir prazo">${ic('lixo')}</button>
+        </div>
+      </div>
+    </li>`;
+  }).join('')}</ul>`;
 }
 
 function telaPrazos() {
-  let resultado = '';
-  try {
-    const r = calcularPrazo(rascunho, calendario());
-    resultado = `
-      <div class="resultado">
-        <div class="res-linha">
-          <div><span class="rotulo">Vencimento</span><span class="res-venc">${formatar(r.vencimento)}</span><span class="sub">${nomeDiaSemana(r.vencimento)}${r.prorrogado ? ' · prorrogado' : ''}</span></div>
-          ${r.publicacao ? `<div><span class="rotulo">Publicação</span>${dataBonita(r.publicacao)}</div>` : ''}
-          <div><span class="rotulo">Início</span>${dataBonita(r.inicio)}</div>
-          <div><span class="rotulo">Dias</span><span class="mono">${r.dias}${rascunho.dobro ? ' (em dobro)' : ''}</span></div>
+  return `
+    <section class="cartao">
+      <div class="ferramentas">
+        <label class="busca">${ic('busca')}<input id="busca-prazos" type="search" placeholder="Buscar por ato, número ou cliente" value="${esc(ui.buscaPrazos)}" aria-label="Buscar prazos"></label>
+        <div class="seg" role="group" aria-label="Filtrar prazos">
+          ${[['pendentes', 'Pendentes'], ['cumpridos', 'Cumpridos'], ['todos', 'Todos']].map(([k, r]) => `<button class="seg-btn ${ui.filtroPrazos === k ? 'ativo' : ''}" data-acao="filtro-prazos" data-valor="${k}" aria-pressed="${ui.filtroPrazos === k}">${r}</button>`).join('')}
         </div>
-        <details>
-          <summary>Memória de cálculo (${r.memoria.length} dias)</summary>
-          <div class="tabela-wrap"><table class="memoria">
-            <thead><tr><th>Data</th><th>Dia</th><th>Contagem</th><th>Observação</th></tr></thead>
-            <tbody>${r.memoria.map((m) => `<tr class="m-${m.tipo}${m.vencimento ? ' m-venc' : ''}"><td class="mono">${formatar(m.data)}</td><td>${nomeDiaSemana(m.data, true)}</td><td class="mono">${m.conta ? `${m.conta}º` : '—'}</td><td>${esc(m.vencimento ? `Termo final${m.texto ? ' · ' + m.texto : ''}` : m.texto)}</td></tr>`).join('')}</tbody>
-          </table></div>
-        </details>
-      </div>`;
-  } catch (e) {
-    resultado = `<div class="resultado erro">${esc(e.message)}</div>`;
-  }
+      </div>
+      <div id="lista-prazos">${listaPrazos()}</div>
+    </section>`;
+}
 
+// ---------- processos ----------
+function listaProcessos() {
   const cal = calendario();
   const hoje = hojeIso();
-  const lista = estado.prazos
-    .filter((p) => (filtroPrazos === 'pendentes' ? !p.cumprido : filtroPrazos === 'cumpridos' ? p.cumprido : true))
-    .map((p) => prazoCalculado(p, cal))
-    .sort((a, b) => (a.calc?.vencimento || '').localeCompare(b.calc?.vencimento || ''));
-
-  return `
-    <div class="duas-colunas">
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Calcular prazo</h2><span class="sub">O resultado é atualizado enquanto você preenche</span></header>
-        <form id="form-prazo" class="form" autocomplete="off">
-          <label class="campo larg">Processo<select id="pz-processo" name="processoId">${opcoesProcesso(rascunho.processoId)}</select></label>
-          <label class="campo larg">Ato / prazo
-            <input id="pz-descricao" name="descricao" list="prazos-usuais" placeholder="Ex.: Contestação" value="${esc(rascunho.descricao)}">
-            <datalist id="prazos-usuais">${PRAZOS_USUAIS.map((u) => `<option value="${esc(u.nome)}">${u.dias} dias · ${esc(u.base)}</option>`).join('')}</datalist>
-          </label>
-          <label class="campo">Marco inicial
-            <select id="pz-marco" name="marco">
-              <option value="disponibilizacao" ${rascunho.marco === 'disponibilizacao' ? 'selected' : ''}>Disponibilização no DJe/DJEN</option>
-              <option value="intimacao" ${rascunho.marco === 'intimacao' ? 'selected' : ''}>Intimação / ciência / juntada</option>
-            </select>
-          </label>
-          <label class="campo">Data do marco<input id="pz-data" type="date" name="dataMarco" value="${esc(rascunho.dataMarco)}" required></label>
-          <label class="campo">Contagem
-            <select id="pz-contagem" name="contagem">
-              <option value="uteis" ${rascunho.contagem === 'uteis' ? 'selected' : ''}>Dias úteis (CPC, art. 219)</option>
-              <option value="corridos" ${rascunho.contagem === 'corridos' ? 'selected' : ''}>Dias corridos (CPP, art. 798)</option>
-            </select>
-          </label>
-          <label class="campo">Quantidade de dias<input id="pz-dias" type="number" min="1" max="3650" step="1" name="dias" value="${esc(rascunho.dias)}" required></label>
-          <label class="check"><input id="pz-dobro" type="checkbox" name="dobro" ${rascunho.dobro ? 'checked' : ''}> Prazo em dobro (CPC, arts. 180, 183, 186 e 229)</label>
-          ${rascunho.contagem === 'corridos' ? `<label class="check"><input id="pz-recesso" type="checkbox" name="suspenderRecesso" ${rascunho.suspenderRecesso !== false ? 'checked' : ''}> Suspender no recesso (desmarque para réu preso, Lei Maria da Penha ou medida urgente, CPP, art. 798-A)</label>` : ''}
-          ${resultado}
-          <div class="form-acoes"><button type="submit" class="btn">Salvar prazo</button></div>
-        </form>
-      </section>
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Prazos cadastrados</h2>
-          <div class="seg" role="group" aria-label="Filtrar prazos">
-            ${['pendentes', 'cumpridos', 'todos'].map((f) => `<button class="seg-btn ${filtroPrazos === f ? 'ativo' : ''}" data-acao="filtro" data-valor="${f}">${f[0].toUpperCase() + f.slice(1)}</button>`).join('')}
-          </div>
-        </header>
-        ${lista.length ? `<ul class="lista">${lista.map((p) => `
-          <li class="linha ${p.calc && !p.cumprido ? 'sit-' + situacao(p.calc.vencimento, hoje).chave : ''}">
-            <div class="linha-princ">
-              <strong>${esc(p.descricao || 'Prazo')}</strong>
-              <span class="sub">${p.processoId ? rotuloProcesso(p.processoId) : 'Sem processo vinculado'}</span>
-              <span class="sub">${p.dias} dias ${p.contagem === 'uteis' ? 'úteis' : 'corridos'}${p.dobro ? ' em dobro' : ''} · marco ${formatar(p.dataMarco)}</span>
-            </div>
-            <div class="linha-lado">
-              ${p.calc ? dataBonita(p.calc.vencimento) : `<span class="pill pill-vencido">${esc(p.erro)}</span>`}
-              ${p.cumprido ? '<span class="pill pill-ok">Cumprido</span>' : p.calc ? pill(situacao(p.calc.vencimento, hoje)) : ''}
-              <div class="acoes">
-                <button class="btn-sec" data-acao="${p.cumprido ? 'reabrir' : 'cumprir'}" data-id="${p.id}">${p.cumprido ? 'Reabrir' : 'Cumprido'}</button>
-                <button class="btn-sec" data-acao="editar-prazo" data-id="${p.id}">Recalcular</button>
-                <button class="btn-perigo" data-acao="excluir-prazo" data-id="${p.id}">Excluir</button>
-              </div>
-            </div>
-          </li>`).join('')}</ul>` : vazio('Nenhum prazo nesta lista.', 'Use o formulário ao lado para calcular e salvar.')}
-      </section>
-    </div>`;
+  const busca = ui.buscaProcessos.trim().toLowerCase();
+  const lista = estado.processos.filter((p) => !busca || Object.values(p).join(' ').toLowerCase().includes(busca));
+  if (!lista.length) return vazio('Nenhum processo encontrado', busca ? 'Tente outro termo de busca.' : 'Cadastre o primeiro processo pelo número CNJ.', `<button class="btn" data-acao="abrir-processo">${ic('mais')}Novo processo</button>`);
+  return `<div class="cards">${lista.map((p) => {
+    const abertos = estado.prazos.filter((z) => z.processoId === p.id && !z.cumprido).map((z) => comCalculo(z, cal)).filter((z) => z.calc)
+      .sort((a, b) => a.calc.vencimento.localeCompare(b.calc.vencimento));
+    const prox = abertos[0];
+    const sit = prox && situacao(prox.calc.vencimento, hoje);
+    return `
+    <article class="proc ${sit ? 'sit-' + sit.chave : ''}">
+      <div class="proc-topo">${p.area ? `<span class="tag">${esc(p.area)}</span>` : '<span></span>'}<button class="btn-icone" data-acao="editar-processo" data-id="${p.id}" aria-label="Editar processo" title="Editar">${ic('editar')}</button></div>
+      <div class="proc-num mono">${esc(p.numero)}</div>
+      <div class="proc-partes"><strong>${esc(p.cliente || 'Cliente não informado')}</strong>${p.parteContraria ? `<span class="sub">× ${esc(p.parteContraria)}</span>` : ''}</div>
+      ${p.orgao ? `<div class="sub">${esc(p.orgao)}</div>` : ''}
+      <div class="proc-rodape">
+        ${prox ? `<div class="proc-prox"><span class="sub">Próximo prazo · ${esc(prox.descricao)}</span><span><strong class="mono">${formatar(prox.calc.vencimento)}</strong> ${chip(sit)}</span></div>` : '<span class="sub">Nenhum prazo em aberto</span>'}
+        <button class="btn btn-sec" data-acao="prazo-para" data-id="${p.id}">${ic('mais')}Prazo</button>
+      </div>
+    </article>`;
+  }).join('')}</div>`;
 }
 
 function telaProcessos() {
-  const cal = calendario();
-  const hoje = hojeIso();
   return `
-    <div class="duas-colunas">
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Novo processo</h2></header>
-        <form id="form-processo" class="form" autocomplete="off">
-          <label class="campo larg">Número CNJ<input id="pr-numero" name="numero" class="mono" placeholder="0000000-00.0000.0.00.0000" required><span id="pr-numero-aviso" class="aviso" aria-live="polite"></span></label>
-          <label class="campo">Cliente<input id="pr-cliente" name="cliente"></label>
-          <label class="campo">Parte contrária<input id="pr-contraria" name="parteContraria"></label>
-          <label class="campo">Órgão julgador<input id="pr-orgao" name="orgao" placeholder="Ex.: 3ª Vara Cível de Belém"></label>
-          <label class="campo">Área<input id="pr-area" name="area" list="areas" placeholder="Ex.: Condominial"><datalist id="areas"><option value="Cível"><option value="Imobiliário"><option value="Condominial"><option value="Locação"><option value="Consumidor"><option value="Empresarial"><option value="Família"><option value="Penal"></datalist></label>
-          <label class="campo larg">Observações<textarea id="pr-obs" name="obs" rows="2"></textarea></label>
-          <div class="form-acoes"><button type="submit" class="btn">Cadastrar processo</button></div>
-        </form>
-      </section>
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Processos</h2><span class="sub">${estado.processos.length} cadastrado(s)</span></header>
-        ${estado.processos.length ? `<ul class="lista">${estado.processos.map((p) => {
-          const abertos = estado.prazos.filter((z) => z.processoId === p.id && !z.cumprido).map((z) => prazoCalculado(z, cal)).filter((z) => z.calc);
-          const prox = abertos.sort((a, b) => a.calc.vencimento.localeCompare(b.calc.vencimento))[0];
-          return `
-          <li class="linha">
-            <div class="linha-princ">
-              <strong class="mono">${esc(p.numero)}</strong>
-              <span>${esc(p.cliente || '—')}${p.parteContraria ? ` <span class="sub">× ${esc(p.parteContraria)}</span>` : ''}</span>
-              <span class="sub">${[p.orgao, p.area].filter(Boolean).map(esc).join(' · ')}</span>
-              ${p.obs ? `<span class="sub">${esc(p.obs)}</span>` : ''}
-            </div>
-            <div class="linha-lado">
-              ${prox ? `<span class="sub">Próximo prazo</span>${dataBonita(prox.calc.vencimento)}${pill(situacao(prox.calc.vencimento, hoje))}` : '<span class="sub">Sem prazos abertos</span>'}
-              <div class="acoes">
-                <button class="btn-sec" data-acao="novo-prazo-para" data-id="${p.id}">Novo prazo</button>
-                <button class="btn-perigo" data-acao="excluir-processo" data-id="${p.id}">Excluir</button>
-              </div>
-            </div>
-          </li>`;
-        }).join('')}</ul>` : vazio('Nenhum processo cadastrado.', 'Informe o número CNJ ao lado para começar.')}
-      </section>
-    </div>`;
+    <div class="ferramentas solta">
+      <label class="busca">${ic('busca')}<input id="busca-processos" type="search" placeholder="Buscar por número, cliente, parte ou vara" value="${esc(ui.buscaProcessos)}" aria-label="Buscar processos"></label>
+      <span class="sub">${plural(estado.processos.length, 'processo', 'processos')}</span>
+    </div>
+    <div id="lista-processos">${listaProcessos()}</div>`;
 }
 
+// ---------- tarefas ----------
 function telaTarefas() {
   const hoje = hojeIso();
-  const ordenadas = [...estado.tarefas].sort((a, b) => Number(a.concluida) - Number(b.concluida) || (a.data || '9').localeCompare(b.data || '9'));
+  const abertas = estado.tarefas.filter((t) => !t.concluida);
+  const feitas = estado.tarefas.filter((t) => t.concluida);
+  const ord = (a, b) => (a.data || '9').localeCompare(b.data || '9');
+  const grupos = [
+    ['Atrasadas', abertas.filter((t) => t.data && t.data < hoje)],
+    ['Hoje', abertas.filter((t) => t.data === hoje)],
+    ['Próximas', abertas.filter((t) => t.data && t.data > hoje)],
+    ['Sem data', abertas.filter((t) => !t.data)],
+  ].filter(([, l]) => l.length);
+
+  const linha = (t) => `
+    <li class="tarefa ${t.concluida ? 'feita' : ''}">
+      <input type="checkbox" id="tf-${t.id}" class="caixa" data-acao="alternar-tarefa" data-id="${t.id}" ${t.concluida ? 'checked' : ''}>
+      <label for="tf-${t.id}" class="tarefa-corpo">
+        <span class="tarefa-titulo">${esc(t.titulo)}${t.prioridade === 'alta' ? '<span class="chip chip-urgente">Alta</span>' : ''}</span>
+        <span class="sub">${[t.data ? formatar(t.data) + ' · ' + nomeDiaSemana(t.data, true) : '', t.processoId ? rotuloProcesso(t.processoId) : ''].filter(Boolean).join(' · ')}</span>
+      </label>
+      ${!t.concluida && t.data ? chip(situacao(t.data, hoje)) : ''}
+      <button class="btn-icone perigo" data-acao="excluir-tarefa" data-id="${t.id}" aria-label="Excluir tarefa" title="Excluir">${ic('lixo')}</button>
+    </li>`;
+
   return `
-    <div class="duas-colunas">
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Nova tarefa</h2></header>
-        <form id="form-tarefa" class="form" autocomplete="off">
-          <label class="campo larg">Descrição<input id="tf-titulo" name="titulo" required placeholder="Ex.: Ligar para o cliente sobre a audiência"></label>
-          <label class="campo larg">Processo<select id="tf-processo" name="processoId">${opcoesProcesso('')}</select></label>
-          <label class="campo">Data<input id="tf-data" type="date" name="data" value="${hoje}"></label>
-          <label class="campo">Prioridade<select id="tf-prioridade" name="prioridade"><option value="normal">Normal</option><option value="alta">Alta</option></select></label>
-          <div class="form-acoes"><button type="submit" class="btn">Adicionar tarefa</button></div>
-        </form>
-      </section>
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Tarefas</h2><span class="sub">${estado.tarefas.filter((t) => !t.concluida).length} aberta(s)</span></header>
-        ${ordenadas.length ? `<ul class="lista">${ordenadas.map((t) => `
-          <li class="linha ${t.concluida ? 'feita' : t.data ? 'sit-' + situacao(t.data, hoje).chave : ''}">
-            <label class="check tarefa-check"><input type="checkbox" data-acao="alternar-tarefa" data-id="${t.id}" ${t.concluida ? 'checked' : ''}><span><strong>${esc(t.titulo)}</strong>${t.prioridade === 'alta' ? ' <span class="pill pill-urgente">Alta</span>' : ''}${t.processoId ? `<span class="sub bloco-sub">${rotuloProcesso(t.processoId)}</span>` : ''}</span></label>
-            <div class="linha-lado">
-              ${t.data ? dataBonita(t.data) : ''}
-              ${!t.concluida && t.data ? pill(situacao(t.data, hoje)) : ''}
-              <div class="acoes"><button class="btn-perigo" data-acao="excluir-tarefa" data-id="${t.id}">Excluir</button></div>
-            </div>
-          </li>`).join('')}</ul>` : vazio('Nenhuma tarefa.', 'Adicione a primeira pelo formulário.')}
-      </section>
-    </div>`;
+    <form id="form-tarefa" class="cartao rapida" autocomplete="off">
+      <input id="tf-titulo" name="titulo" required placeholder="O que precisa ser feito?" aria-label="Descrição da tarefa">
+      <div class="rapida-opcoes">
+        <select id="tf-processo" name="processoId" aria-label="Processo">${opcoesProcesso('', 'Sem processo')}</select>
+        <input id="tf-data" type="date" name="data" value="${hoje}" aria-label="Data">
+        <select id="tf-prioridade" name="prioridade" aria-label="Prioridade"><option value="normal">Prioridade normal</option><option value="alta">Prioridade alta</option></select>
+        <button type="submit" class="btn">${ic('mais')}Adicionar</button>
+      </div>
+    </form>
+    <section class="cartao">
+      ${grupos.length ? grupos.map(([rotulo, l]) => `<div class="grupo"><h3 class="grupo-titulo">${rotulo}<span>${l.length}</span></h3><ul class="tarefas">${l.sort(ord).map(linha).join('')}</ul></div>`).join('') : vazio('Nenhuma tarefa aberta', 'Escreva acima o que precisa ser feito e pressione Enter.')}
+      ${feitas.length ? `<details class="feitas"><summary>Concluídas (${feitas.length})</summary><ul class="tarefas">${feitas.sort(ord).map(linha).join('')}</ul></details>` : ''}
+    </section>`;
 }
 
+// ---------- ajustes ----------
 function telaAjustes() {
   const ano = Number(hojeIso().slice(0, 4));
   const feriados = calendario().feriadosDoAno(ano);
   return `
-    <div class="duas-colunas">
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Calendário forense</h2></header>
-        <div class="form">
-          ${Object.entries(PRESETS).map(([k, p]) => `<label class="check larg"><input type="checkbox" data-acao="preset" data-valor="${k}" ${estado.config.presets.includes(k) ? 'checked' : ''}> ${esc(p.nome)}</label>`).join('')}
-          <p class="nota larg">Feriados nacionais, Carnaval, Sexta-feira da Paixão, Corpus Christi e o recesso de 20/12 a 20/01 já são considerados. Feriados municipais, pontos facultativos e indisponibilidades do sistema devem ser cadastrados abaixo, conforme as portarias do tribunal.</p>
-        </div>
-        <form id="form-suspensao" class="form" autocomplete="off">
+    <div class="ajustes">
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Preferências</h2></header>
+        <form id="form-nome" class="form" autocomplete="off">
+          <label class="campo">Como deseja ser chamada no painel<input id="cfg-nome" name="nome" value="${esc(nomeUsuario())}"></label>
+          <div class="form-acoes"><button class="btn btn-sec" type="submit">Salvar</button></div>
+        </form>
+      </section>
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Calendário forense</h2></header>
+        <p class="nota">Já considerados: feriados nacionais, Carnaval, Sexta-feira da Paixão, Corpus Christi e o recesso de 20/12 a 20/01.</p>
+        ${Object.entries(PRESETS).map(([k, p]) => `
+          <label class="interruptor"><input type="checkbox" id="preset-${k}" data-acao="preset" data-valor="${k}" ${estado.config.presets.includes(k) ? 'checked' : ''}><span class="trilho"></span><span>${esc(p.nome)}</span></label>`).join('')}
+        <h3 class="sub-titulo">Suspensões e feriados locais</h3>
+        <form id="form-suspensao" class="form tres" autocomplete="off">
           <label class="campo">De<input id="sp-inicio" type="date" name="inicio" required></label>
           <label class="campo">Até (opcional)<input id="sp-fim" type="date" name="fim"></label>
-          <label class="campo larg">Motivo<input id="sp-descricao" name="descricao" placeholder="Ex.: Indisponibilidade do PJe (Portaria nº ...)" required></label>
-          <div class="form-acoes"><button type="submit" class="btn">Adicionar suspensão</button></div>
+          <label class="campo larg">Motivo<input id="sp-descricao" name="descricao" placeholder="Ex.: Indisponibilidade do PJe, Portaria nº…" required></label>
+          <div class="form-acoes larg"><button type="submit" class="btn btn-sec">${ic('mais')}Adicionar suspensão</button></div>
         </form>
-        ${estado.config.personalizados.length ? `<ul class="lista compacta">${estado.config.personalizados.map((s, i) => `<li class="linha"><div class="linha-princ"><strong>${esc(s.descricao)}</strong><span class="sub mono">${formatar(s.inicio)}${s.fim && s.fim !== s.inicio ? ' a ' + formatar(s.fim) : ''}</span></div><div class="acoes"><button class="btn-perigo" data-acao="excluir-suspensao" data-id="${i}">Remover</button></div></li>`).join('')}</ul>` : ''}
-        <details class="larg"><summary>Feriados considerados em ${ano} (${feriados.length})</summary>
-          <ul class="feriados">${feriados.map(([d, n]) => `<li>${dataBonita(d)}<span>${esc(n)}</span></li>`).join('')}</ul>
+        ${estado.config.personalizados.length ? `<ul class="simples">${estado.config.personalizados.map((s, i) => `<li><span><strong>${esc(s.descricao)}</strong><span class="sub mono">${formatar(s.inicio)}${s.fim && s.fim !== s.inicio ? ' a ' + formatar(s.fim) : ''}</span></span><button class="btn-icone perigo" data-acao="excluir-suspensao" data-id="${i}" aria-label="Remover suspensão">${ic('lixo')}</button></li>`).join('')}</ul>` : ''}
+        <details><summary>Dias sem expediente em ${ano} (${feriados.length})</summary>
+          <ul class="simples">${feriados.map(([d, nome]) => `<li><span class="mono">${formatar(d)} <span class="sub">${nomeDiaSemana(d, true)}</span></span><span>${esc(nome)}</span></li>`).join('')}</ul>
         </details>
       </section>
-      <section class="bloco">
-        <header class="bloco-cab"><h2>Backup dos dados</h2></header>
-        <p class="nota">Os dados ficam apenas neste navegador. Copie o backup periodicamente e guarde-o em local seguro. Ao trocar de aparelho, cole o backup no campo abaixo e importe.</p>
-        <div class="form">
-          <div class="form-acoes larg"><button class="btn-sec" data-acao="exportar">Gerar backup</button><button class="btn-sec" data-acao="copiar-backup">Copiar</button><button class="btn" data-acao="importar">Importar o texto colado</button></div>
-          <label class="campo larg">Conteúdo do backup (JSON)<textarea id="backup" rows="6" class="mono" placeholder="Clique em Gerar backup ou cole aqui um backup para importar."></textarea></label>
-        </div>
-        <header class="bloco-cab"><h2>Recomeçar</h2></header>
-        <p class="nota">Apaga todos os processos, prazos e tarefas deste navegador.</p>
-        <div class="form-acoes"><button class="btn-perigo" data-acao="apagar-tudo">Apagar todos os dados</button></div>
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Backup</h2></header>
+        <p class="nota">Os dados ficam somente neste navegador. Gere um backup periodicamente e guarde-o em local seguro; para usar em outro aparelho, cole o backup aqui e importe.</p>
+        <textarea id="backup" rows="5" class="mono area" placeholder="Clique em “Gerar backup” ou cole aqui um backup para importar." aria-label="Conteúdo do backup"></textarea>
+        <div class="form-acoes"><button class="btn btn-sec" data-acao="exportar">Gerar backup</button><button class="btn btn-sec" data-acao="copiar-backup">Copiar</button><button class="btn" data-acao="importar">Importar</button></div>
+      </section>
+      <section class="cartao">
+        <header class="cartao-cab"><h2>Recomeçar</h2></header>
+        <p class="nota">Apaga processos, prazos e tarefas deste navegador. Não pode ser desfeito.</p>
+        <div class="form-acoes"><button class="btn btn-perigo" data-acao="apagar-tudo">Apagar todos os dados</button></div>
       </section>
     </div>`;
 }
 
+// ---------- gavetas ----------
+function opcoesProcesso(selecionado, rotuloVazio = 'Sem processo vinculado') {
+  return `<option value="">${rotuloVazio}</option>` + estado.processos.map((p) => `<option value="${p.id}" ${p.id === selecionado ? 'selected' : ''}>${esc(p.numero)}${p.cliente ? ' · ' + esc(p.cliente) : ''}</option>`).join('');
+}
+
+function htmlResultado() {
+  try {
+    const r = calcularPrazo(rascunho, calendario());
+    const sit = situacao(r.vencimento, hojeIso());
+    return `
+      <div class="res">
+        <span class="eyebrow">Vencimento</span>
+        <div class="res-data">${formatar(r.vencimento)}</div>
+        <div class="res-sub">${nomeDiaSemana(r.vencimento)}${r.prorrogado ? ' · prorrogado' : ''} ${chip(sit)}</div>
+        <dl class="res-fatos">
+          ${r.publicacao ? `<div><dt>Publicação</dt><dd>${formatar(r.publicacao)}</dd></div>` : ''}
+          <div><dt>Início</dt><dd>${formatar(r.inicio)}</dd></div>
+          <div><dt>Dias</dt><dd>${r.dias}${rascunho.dobro ? ' (dobro)' : ''}</dd></div>
+        </dl>
+      </div>
+      <details class="memoria-det">
+        <summary>Memória de cálculo dia a dia</summary>
+        <div class="tabela-wrap"><table class="memoria">
+          <thead><tr><th>Data</th><th>Dia</th><th>Nº</th><th>Observação</th></tr></thead>
+          <tbody>${r.memoria.map((m) => `<tr class="m-${m.tipo}${m.vencimento ? ' m-venc' : ''}"><td class="mono">${formatar(m.data)}</td><td>${nomeDiaSemana(m.data, true)}</td><td class="mono">${m.conta ? `${m.conta}º` : '—'}</td><td>${esc(m.vencimento ? `Termo final${m.texto ? ' · ' + m.texto : ''}` : m.texto)}</td></tr>`).join('')}</tbody>
+        </table></div>
+      </details>`;
+  } catch (e) {
+    return `<div class="res res-erro">${ic('alerta')}<span>${esc(e.message)}</span></div>`;
+  }
+}
+
+function gavetaPrazo() {
+  const r = rascunho;
+  return `
+    <form id="form-prazo" class="gaveta-form" autocomplete="off">
+      <header class="gaveta-cab"><h2>${r.id ? 'Prazo e memória de cálculo' : 'Novo prazo'}</h2><button type="button" class="btn-icone" data-acao="fechar" aria-label="Fechar">${ic('fechar')}</button></header>
+      <div class="gaveta-corpo">
+        <fieldset class="passo">
+          <legend><span class="passo-n">1</span>Ato processual</legend>
+          <label class="campo">Processo<select id="pz-processo" name="processoId">${opcoesProcesso(r.processoId)}</select></label>
+          <label class="campo">Ato / prazo<input id="pz-descricao" name="descricao" placeholder="Ex.: Contestação" value="${esc(r.descricao)}"></label>
+          <div class="sugestoes" aria-label="Prazos usuais">${PRAZOS_USUAIS.map((u, i) => `<button type="button" class="sug ${r.descricao === u.nome ? 'ativo' : ''}" data-acao="usual" data-valor="${i}" title="${esc(u.base)}">${esc(u.nome)} <span>${u.dias}d</span></button>`).join('')}</div>
+        </fieldset>
+        <fieldset class="passo">
+          <legend><span class="passo-n">2</span>Marco inicial</legend>
+          <div class="opcoes-radio">
+            <label class="radio"><input type="radio" name="marco" value="disponibilizacao" ${r.marco === 'disponibilizacao' ? 'checked' : ''}><span><strong>Disponibilização no DJe/DJEN</strong><small>Publicação no dia útil seguinte</small></span></label>
+            <label class="radio"><input type="radio" name="marco" value="intimacao" ${r.marco === 'intimacao' ? 'checked' : ''}><span><strong>Intimação ou ciência</strong><small>Inclui juntada do mandado ou AR</small></span></label>
+          </div>
+          <label class="campo">Data<input id="pz-data" type="date" name="dataMarco" value="${esc(r.dataMarco)}" required></label>
+        </fieldset>
+        <fieldset class="passo">
+          <legend><span class="passo-n">3</span>Contagem</legend>
+          <div class="linha-campos">
+            <label class="campo">Dias<input id="pz-dias" type="number" min="1" max="3650" step="1" name="dias" value="${esc(r.dias)}" required></label>
+            <label class="campo">Forma<select id="pz-contagem" name="contagem">
+              <option value="uteis" ${r.contagem === 'uteis' ? 'selected' : ''}>Dias úteis (CPC)</option>
+              <option value="corridos" ${r.contagem === 'corridos' ? 'selected' : ''}>Dias corridos (CPP)</option>
+            </select></label>
+          </div>
+          <label class="interruptor"><input id="pz-dobro" type="checkbox" name="dobro" ${r.dobro ? 'checked' : ''}><span class="trilho"></span><span>Prazo em dobro <small>CPC, arts. 180, 183, 186 e 229</small></span></label>
+          <label class="interruptor" id="linha-recesso" ${r.contagem === 'corridos' ? '' : 'hidden'}><input id="pz-recesso" type="checkbox" name="suspenderRecesso" ${r.suspenderRecesso !== false ? 'checked' : ''}><span class="trilho"></span><span>Suspender no recesso <small>Desligue para réu preso, Lei Maria da Penha ou urgência (CPP, art. 798-A)</small></span></label>
+        </fieldset>
+        <div id="resultado" class="resultado" aria-live="polite">${htmlResultado()}</div>
+      </div>
+      <footer class="gaveta-rodape"><span id="rodape-venc" class="rodape-venc">${resumoVencimento()}</span><button type="button" class="btn btn-sec" data-acao="fechar">Cancelar</button><button type="submit" class="btn">${r.id ? 'Salvar alterações' : 'Salvar prazo'}</button></footer>
+    </form>`;
+}
+
+function resumoVencimento() {
+  try {
+    const r = calcularPrazo(rascunho, calendario());
+    return `<small>Vence em</small><strong class="mono">${formatar(r.vencimento)}</strong>`;
+  } catch {
+    return '<small>Complete os dados</small>';
+  }
+}
+
+function gavetaProcesso() {
+  const p = ui.processoEdit ? processo(ui.processoEdit) : {};
+  const cnj = p.numero ? analisarNumeroCnj(p.numero) : null;
+  return `
+    <form id="form-processo" class="gaveta-form" autocomplete="off">
+      <header class="gaveta-cab"><h2>${p.id ? 'Editar processo' : 'Novo processo'}</h2><button type="button" class="btn-icone" data-acao="fechar" aria-label="Fechar">${ic('fechar')}</button></header>
+      <div class="gaveta-corpo">
+        <label class="campo">Número CNJ<input id="pr-numero" name="numero" class="mono" placeholder="0000000-00.0000.0.00.0000" value="${esc(p.numero)}" required>
+          <span id="pr-numero-aviso" class="aviso ${cnj ? (cnj.valido ? 'aviso-ok' : 'aviso-erro') : ''}" aria-live="polite">${cnj ? esc(cnj.valido ? `${cnj.segmento} · TR ${cnj.tribunal} · ${cnj.ano}` : cnj.erro) : 'O dígito verificador é conferido automaticamente.'}</span></label>
+        <label class="campo">Cliente<input id="pr-cliente" name="cliente" value="${esc(p.cliente)}"></label>
+        <label class="campo">Parte contrária<input id="pr-contraria" name="parteContraria" value="${esc(p.parteContraria)}"></label>
+        <label class="campo">Órgão julgador<input id="pr-orgao" name="orgao" placeholder="Ex.: 3ª Vara Cível de Belém" value="${esc(p.orgao)}"></label>
+        <label class="campo">Área<input id="pr-area" name="area" list="areas" placeholder="Ex.: Condominial" value="${esc(p.area)}"><datalist id="areas"><option value="Cível"><option value="Imobiliário"><option value="Condominial"><option value="Locação"><option value="Consumidor"><option value="Empresarial"><option value="Família"><option value="Penal"></datalist></label>
+        <label class="campo">Observações<textarea id="pr-obs" name="obs" rows="3">${esc(p.obs)}</textarea></label>
+        ${p.id ? `<div class="zona-perigo"><span class="sub">Excluir remove também os prazos deste processo.</span><button type="button" class="btn btn-perigo" data-acao="excluir-processo" data-id="${p.id}">Excluir processo</button></div>` : ''}
+      </div>
+      <footer class="gaveta-rodape"><button type="button" class="btn btn-sec" data-acao="fechar">Cancelar</button><button type="submit" class="btn">${p.id ? 'Salvar alterações' : 'Cadastrar processo'}</button></footer>
+    </form>`;
+}
+
+// ---------- estrutura ----------
 const ABAS = [
   ['painel', 'Painel', telaPainel],
   ['prazos', 'Prazos', telaPrazos],
@@ -315,33 +517,97 @@ const ABAS = [
   ['ajustes', 'Ajustes', telaAjustes],
 ];
 
+function saudacao() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+}
+
+function cabecalho() {
+  const hoje = hojeIso();
+  if (ui.aba === 'painel') {
+    const nome = nomeUsuario();
+    return { titulo: `${saudacao()}${nome ? ', ' + esc(nome) : ''}`, sub: dataExtensa(hoje) + ` de ${hoje.slice(0, 4)}`, acoes: `<button class="btn btn-sec esconde-movel" data-acao="ir" data-valor="tarefas">${ic('tarefas')}Nova tarefa</button><button class="btn" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>` };
+  }
+  if (ui.aba === 'prazos') return { titulo: 'Prazos', sub: 'Calcule, acompanhe e dê baixa nos prazos processuais', acoes: `<button class="btn" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>` };
+  if (ui.aba === 'processos') return { titulo: 'Processos', sub: 'Sua carteira de processos', acoes: `<button class="btn" data-acao="abrir-processo">${ic('mais')}Novo processo</button>` };
+  if (ui.aba === 'tarefas') return { titulo: 'Tarefas', sub: 'Providências do escritório', acoes: '' };
+  return { titulo: 'Ajustes', sub: 'Calendário, backup e preferências', acoes: '' };
+}
+
+function contadores() {
+  const itens = itensAgenda();
+  return {
+    prazos: itens.filter((i) => i.tipo === 'prazo' && i.sit.faltam <= 3).length,
+    tarefas: itens.filter((i) => i.tipo === 'tarefa' && i.sit.faltam <= 0).length,
+  };
+}
+
 function render() {
-  const foco = document.activeElement?.id;
-  const tela = ABAS.find(([k]) => k === aba)[2];
+  const tela = ABAS.find(([k]) => k === ui.aba)[2];
+  const cab = cabecalho();
+  const cont = contadores();
+  const badge = (k) => (cont[k] ? `<span class="badge" aria-label="${cont[k]} urgentes">${cont[k]}</span>` : '');
+  const nav = (cls) => ABAS.map(([k, r]) => `<button class="${cls} ${k === ui.aba ? 'ativo' : ''}" data-acao="ir" data-valor="${k}" ${k === ui.aba ? 'aria-current="page"' : ''}>${ic(k)}<span>${r}</span>${badge(k)}</button>`).join('');
+
   app.innerHTML = `
-    <header class="topo">
-      <div class="topo-in">
-        <div class="marca"><span class="marca-nome">Painel de Prazos</span><span class="marca-data">${esc(nomeDiaSemana(hojeIso()))}, ${formatar(hojeIso())}</span></div>
-        <nav class="abas" aria-label="Seções">${ABAS.map(([k, r]) => `<button class="aba ${k === aba ? 'ativa' : ''}" data-acao="aba" data-valor="${k}" ${k === aba ? 'aria-current="page"' : ''}>${r}</button>`).join('')}</nav>
+    <div class="shell">
+      <aside class="lateral">
+        <div class="marca">${ic('balanca', 'marca-ic')}<span><strong>Painel de Prazos</strong><small>Gestão processual</small></span></div>
+        <button class="btn btn-ouro" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>
+        <nav class="nav" aria-label="Seções">${nav('nav-item')}</nav>
+        <p class="lateral-nota">Dados guardados apenas neste navegador.</p>
+      </aside>
+      <div class="principal">
+        <header class="barra">
+          <div class="barra-titulos"><h1>${cab.titulo}</h1><p>${cab.sub}</p></div>
+          <div class="barra-acoes">${cab.acoes}</div>
+        </header>
+        ${estado.exemplo ? `<div class="faixa"><span>Você está vendo <strong>dados de exemplo</strong>, todos fictícios.</span><button class="btn btn-sec" data-acao="limpar-exemplo">Começar com painel vazio</button></div>` : ''}
+        <main class="conteudo">${tela()}</main>
+        <footer class="rodape">Ferramenta de apoio. Confira sempre o termo final com a certidão do sistema e com o calendário oficial do tribunal.</footer>
       </div>
-    </header>
-    <main class="conteudo">
-      ${estado.exemplo ? `<div class="faixa"><span>Você está vendo <strong>dados de exemplo</strong>, todos fictícios.</span> <button class="btn-sec" data-acao="limpar-exemplo">Começar com painel vazio</button></div>` : ''}
-      ${mensagem ? `<div class="toast" role="status">${esc(mensagem)}</div>` : ''}
-      ${tela()}
-      <footer class="rodape">Ferramenta de apoio. Confira sempre o termo final com a certidão do sistema e com o calendário oficial do tribunal.</footer>
-    </main>`;
+      <nav class="nav-movel" aria-label="Seções">${nav('nm-item')}</nav>
+      ${ui.gaveta ? `<div class="veu" data-acao="fechar"></div><div class="gaveta" role="dialog" aria-modal="true">${ui.gaveta === 'prazo' ? gavetaPrazo() : gavetaProcesso()}</div>` : ''}
+      ${mensagem ? `<div class="toast ${mensagemErro ? 'toast-erro' : ''}" role="status">${ic(mensagemErro ? 'alerta' : 'check')}<span>${esc(mensagem)}</span></div>` : ''}
+    </div>`;
+  if (mensagem) {
+    const t = app.querySelector('.toast');
+    setTimeout(() => t?.classList.add('saindo'), 2800);
+    setTimeout(() => t?.remove(), 3200);
+  }
   mensagem = null;
-  if (foco) document.getElementById(foco)?.focus();
+  mensagemErro = false;
+  document.body.classList.toggle('travado', !!ui.gaveta);
+}
+
+function abrirGaveta(tipo) {
+  ui.gaveta = tipo;
+  render();
+  app.querySelector('.gaveta input:not([type=hidden]), .gaveta select')?.focus();
+}
+
+function fecharGaveta() {
+  ui.gaveta = null;
+  ui.processoEdit = null;
+  render();
 }
 
 // ---------- eventos ----------
 function confirmar(botao) {
   if (botao.dataset.armado) return true;
   botao.dataset.armado = '1';
-  botao.textContent = 'Confirmar exclusão';
-  setTimeout(() => { if (botao.isConnected) { delete botao.dataset.armado; botao.textContent = 'Excluir'; } }, 4000);
+  const original = botao.innerHTML;
+  botao.innerHTML = '<span>Confirmar?</span>';
+  botao.classList.add('armado');
+  setTimeout(() => { if (botao.isConnected) { delete botao.dataset.armado; botao.innerHTML = original; botao.classList.remove('armado'); } }, 4000);
   return false;
+}
+
+function atualizarResultado() {
+  const alvo = document.getElementById('resultado');
+  if (alvo) alvo.innerHTML = htmlResultado();
+  const rodape = document.getElementById('rodape-venc');
+  if (rodape) rodape.innerHTML = resumoVencimento();
 }
 
 app.addEventListener('click', async (ev) => {
@@ -350,19 +616,37 @@ app.addEventListener('click', async (ev) => {
   const { acao, id, valor } = b.dataset;
   const acharPrazo = () => estado.prazos.find((p) => p.id === id);
   switch (acao) {
-    case 'aba': aba = valor; render(); window.scrollTo(0, 0); break;
-    case 'filtro': filtroPrazos = valor; render(); break;
-    case 'cumprir': acharPrazo().cumprido = true; persistir('Prazo marcado como cumprido.'); break;
-    case 'reabrir': acharPrazo().cumprido = false; persistir('Prazo reaberto.'); break;
-    case 'concluir': estado.tarefas.find((t) => t.id === id).concluida = true; persistir('Tarefa concluída.'); break;
-    case 'editar-prazo': {
-      const p = acharPrazo();
-      rascunho = { ...p };
-      estado.prazos = estado.prazos.filter((x) => x.id !== id);
-      persistir('Prazo aberto no formulário. Ajuste e salve novamente.');
+    case 'ir': ui.aba = valor; ui.gaveta = null; render(); window.scrollTo(0, 0); break;
+    case 'fechar': fecharGaveta(); break;
+    case 'abrir-prazo': rascunho = rascunhoNovo(); abrirGaveta('prazo'); break;
+    case 'prazo-para': rascunho = rascunhoNovo({ processoId: id }); abrirGaveta('prazo'); break;
+    case 'ver-prazo': rascunho = { ...acharPrazo() }; abrirGaveta('prazo'); break;
+    case 'abrir-processo': ui.processoEdit = null; abrirGaveta('processo'); break;
+    case 'editar-processo': ui.processoEdit = id; abrirGaveta('processo'); break;
+    case 'usual': {
+      const u = PRAZOS_USUAIS[Number(valor)];
+      const form = document.getElementById('form-prazo');
+      form.descricao.value = u.nome;
+      form.dias.value = u.dias;
+      form.querySelectorAll('.sug').forEach((s) => s.classList.toggle('ativo', s === b));
+      lerRascunho(form);
+      atualizarResultado();
       break;
     }
-    case 'novo-prazo-para': rascunho = { ...rascunho, processoId: id, descricao: '' }; aba = 'prazos'; render(); break;
+    case 'filtro-agenda': ui.filtroAgenda = valor && ui.filtroAgenda !== valor ? valor : null; render(); break;
+    case 'filtro-prazos': ui.filtroPrazos = valor; render(); break;
+    case 'dia': ui.diaSel = valor; if (valor.slice(0, 7) !== ui.mesCal) ui.mesCal = valor.slice(0, 7); render(); break;
+    case 'mes': {
+      if (valor === '0') { ui.mesCal = hojeIso().slice(0, 7); ui.diaSel = hojeIso(); } else {
+        const [a, m] = ui.mesCal.split('-').map(Number);
+        ui.mesCal = criarIso(a, m + Number(valor), 1).slice(0, 7);
+      }
+      render();
+      break;
+    }
+    case 'cumprir': acharPrazo().cumprido = true; persistir('Baixa registrada no prazo.'); break;
+    case 'reabrir': acharPrazo().cumprido = false; persistir('Prazo reaberto.'); break;
+    case 'concluir': estado.tarefas.find((t) => t.id === id).concluida = true; persistir('Tarefa concluída.'); break;
     case 'excluir-prazo': if (confirmar(b)) { estado.prazos = estado.prazos.filter((p) => p.id !== id); persistir('Prazo excluído.'); } break;
     case 'excluir-tarefa': if (confirmar(b)) { estado.tarefas = estado.tarefas.filter((t) => t.id !== id); persistir('Tarefa excluída.'); } break;
     case 'excluir-processo':
@@ -370,17 +654,18 @@ app.addEventListener('click', async (ev) => {
         estado.processos = estado.processos.filter((p) => p.id !== id);
         estado.prazos = estado.prazos.filter((p) => p.processoId !== id);
         estado.tarefas = estado.tarefas.map((t) => (t.processoId === id ? { ...t, processoId: '' } : t));
+        ui.gaveta = null; ui.processoEdit = null;
         persistir('Processo e respectivos prazos excluídos.');
       }
       break;
     case 'excluir-suspensao': estado.config.personalizados.splice(Number(id), 1); persistir('Suspensão removida.'); break;
-    case 'limpar-exemplo': estado = estadoVazio(); persistir('Painel zerado. Cadastre seu primeiro processo.'); aba = 'processos'; render(); break;
+    case 'limpar-exemplo': estado = estadoVazio(); ui.aba = 'processos'; persistir('Painel zerado. Cadastre seu primeiro processo.'); break;
     case 'apagar-tudo': if (confirmar(b)) { estado = estadoVazio(); persistir('Todos os dados foram apagados.'); } break;
     case 'exportar': document.getElementById('backup').value = JSON.stringify(estado, null, 2); break;
     case 'copiar-backup': {
       const area = document.getElementById('backup');
       if (!area.value) area.value = JSON.stringify(estado, null, 2);
-      try { await navigator.clipboard.writeText(area.value); b.textContent = 'Copiado'; } catch { area.select(); b.textContent = 'Selecionado: use Ctrl+C'; }
+      try { await navigator.clipboard.writeText(area.value); b.textContent = 'Copiado'; } catch { area.select(); b.textContent = 'Texto selecionado'; }
       break;
     }
     case 'importar': {
@@ -389,8 +674,7 @@ app.addEventListener('click', async (ev) => {
         estado.exemplo = false;
         persistir('Backup importado.');
       } catch {
-        mensagem = 'O texto colado não é um backup válido. Cole o conteúdo completo gerado por "Gerar backup".';
-        render();
+        avisar('O texto colado não é um backup válido.');
       }
       break;
     }
@@ -405,30 +689,37 @@ app.addEventListener('change', (ev) => {
     persistir(el.checked ? 'Tarefa concluída.' : 'Tarefa reaberta.');
   } else if (el.dataset.acao === 'preset') {
     const s = new Set(estado.config.presets);
-    el.checked ? s.add(el.dataset.valor) : s.delete(el.dataset.valor);
+    if (el.checked) s.add(el.dataset.valor); else s.delete(el.dataset.valor);
     estado.config.presets = [...s];
-    persistir('Calendário atualizado. Os vencimentos foram recalculados.');
+    persistir('Calendário atualizado; vencimentos recalculados.');
   } else if (el.form?.id === 'form-prazo') {
     lerRascunho(el.form);
-    render();
+    document.getElementById('linha-recesso').hidden = rascunho.contagem !== 'corridos';
+    atualizarResultado();
   }
 });
 
 app.addEventListener('input', (ev) => {
   const el = ev.target;
-  if (el.id === 'pr-numero') {
+  if (el.id === 'busca-prazos') {
+    ui.buscaPrazos = el.value;
+    document.getElementById('lista-prazos').innerHTML = listaPrazos();
+  } else if (el.id === 'busca-processos') {
+    ui.buscaProcessos = el.value;
+    document.getElementById('lista-processos').innerHTML = listaProcessos();
+  } else if (el.id === 'pr-numero') {
     const aviso = document.getElementById('pr-numero-aviso');
     const r = analisarNumeroCnj(el.value);
-    aviso.textContent = !el.value ? '' : r.valido ? `${r.segmento} · TR ${r.tribunal} · ${r.ano}` : r.erro;
-    aviso.className = 'aviso ' + (r.valido ? 'aviso-ok' : 'aviso-erro');
-  } else if (el.form?.id === 'form-prazo' && el.id === 'pz-descricao') {
-    const usual = PRAZOS_USUAIS.find((u) => u.nome === el.value);
+    aviso.textContent = !el.value ? 'O dígito verificador é conferido automaticamente.' : r.valido ? `${r.segmento} · TR ${r.tribunal} · ${r.ano}` : r.erro;
+    aviso.className = 'aviso ' + (!el.value ? '' : r.valido ? 'aviso-ok' : 'aviso-erro');
+  } else if (el.form?.id === 'form-prazo') {
     lerRascunho(el.form);
-    if (usual) { rascunho.dias = usual.dias; render(); }
-  } else if (el.form?.id === 'form-prazo' && (el.id === 'pz-dias' || el.id === 'pz-data')) {
-    lerRascunho(el.form);
-    render();
+    atualizarResultado();
   }
+});
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && ui.gaveta) fecharGaveta();
 });
 
 function lerRascunho(form) {
@@ -455,24 +746,39 @@ app.addEventListener('submit', (ev) => {
     try {
       calcularPrazo(rascunho, calendario());
     } catch (e) {
-      mensagem = e.message; render(); return;
+      atualizarResultado();
+      return;
     }
-    estado.prazos.push({ ...rascunho, id: novoId(), cumprido: false, descricao: rascunho.descricao || 'Prazo' });
-    rascunho = { ...rascunho, descricao: '' };
-    persistir('Prazo salvo e incluído na agenda.');
+    const dados = { ...rascunho, descricao: rascunho.descricao || 'Prazo' };
+    if (dados.id) {
+      estado.prazos = estado.prazos.map((p) => (p.id === dados.id ? { ...p, ...dados } : p));
+    } else {
+      estado.prazos.push({ ...dados, id: novoId(), cumprido: false });
+    }
+    ui.gaveta = null;
+    persistir(rascunho.id ? 'Prazo atualizado.' : 'Prazo salvo e incluído na agenda.');
   } else if (form.id === 'form-processo') {
     const r = analisarNumeroCnj(f.numero);
-    if (!r.formatado) { mensagem = r.erro; render(); return; }
-    if (estado.processos.some((p) => p.numero === r.formatado)) { mensagem = 'Este processo já está cadastrado.'; render(); return; }
-    estado.processos.push({ id: novoId(), numero: r.formatado, cliente: f.cliente.trim(), parteContraria: f.parteContraria.trim(), orgao: f.orgao.trim(), area: f.area.trim(), obs: f.obs.trim() });
-    persistir(r.valido ? 'Processo cadastrado.' : 'Processo cadastrado, mas o dígito verificador não confere. Revise o número.');
+    if (!r.formatado) { avisar(r.erro); return; }
+    if (estado.processos.some((p) => p.numero === r.formatado && p.id !== ui.processoEdit)) { avisar('Este processo já está cadastrado.'); return; }
+    const dados = { numero: r.formatado, cliente: f.cliente.trim(), parteContraria: f.parteContraria.trim(), orgao: f.orgao.trim(), area: f.area.trim(), obs: f.obs.trim() };
+    if (ui.processoEdit) estado.processos = estado.processos.map((p) => (p.id === ui.processoEdit ? { ...p, ...dados } : p));
+    else estado.processos.push({ id: novoId(), ...dados });
+    const editando = !!ui.processoEdit;
+    ui.gaveta = null; ui.processoEdit = null;
+    mensagemErro = !r.valido;
+    persistir(!r.valido ? 'Processo salvo, mas o dígito verificador não confere. Revise o número.' : editando ? 'Processo atualizado.' : 'Processo cadastrado.');
   } else if (form.id === 'form-tarefa') {
     estado.tarefas.push({ id: novoId(), titulo: f.titulo.trim(), processoId: f.processoId, data: f.data, prioridade: f.prioridade, concluida: false });
     persistir('Tarefa adicionada.');
+    document.getElementById('tf-titulo')?.focus();
   } else if (form.id === 'form-suspensao') {
-    if (f.fim && f.fim < f.inicio) { mensagem = 'A data final da suspensão é anterior à inicial.'; render(); return; }
+    if (f.fim && f.fim < f.inicio) { avisar('A data final é anterior à inicial.'); return; }
     estado.config.personalizados.push({ inicio: f.inicio, fim: f.fim || f.inicio, descricao: f.descricao.trim() });
-    persistir('Suspensão cadastrada. Os vencimentos foram recalculados.');
+    persistir('Suspensão cadastrada; vencimentos recalculados.');
+  } else if (form.id === 'form-nome') {
+    estado.config.nome = f.nome.trim();
+    persistir('Preferência salva.');
   }
 });
 
