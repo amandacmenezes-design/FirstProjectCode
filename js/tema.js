@@ -21,9 +21,9 @@ const VIDROS = {
     brilho1: 'rgba(181, 69, 95, .12)', brilho2: 'rgba(47, 79, 181, .15)',
   }),
   vidroTerra: vidro('Vidro · cinza, terroso e azul', {
-    base: '#1d1e24', lateral: '#141519', acento: '#a8714a', acentoClaro: '#d9a77f', acentoTinta: '#ffffff', suave: 'rgba(168, 113, 74, .18)',
-    d1: '#8a5634', d2: '#1f2f7c', luz: '#2f4fb5', luzClaro: '#8fa8ff', forte: '#22398a', luzTinta: '#ffffff',
-    brilho1: 'rgba(168, 113, 74, .12)', brilho2: 'rgba(47, 79, 181, .15)',
+    base: '#26282f', lateral: '#1b1c21', acento: '#93512b', acentoClaro: '#d39468', acentoTinta: '#ffffff', suave: 'rgba(147, 81, 43, .22)',
+    d1: '#6e3a1a', d2: '#1f2f7c', luz: '#2f4fb5', luzClaro: '#8fa8ff', forte: '#22398a', luzTinta: '#ffffff',
+    brilho1: 'rgba(147, 81, 43, .15)', brilho2: 'rgba(47, 79, 181, .15)',
   }),
   vidroCinza: vidro('Vidro · cinza, violeta e azul', {
     base: '#1d1e24', lateral: '#141519', acento: '#8b7bff', acentoClaro: '#b5aaff', acentoTinta: '#ffffff', suave: 'rgba(139, 123, 255, .16)',
@@ -115,7 +115,7 @@ const BASE_ESCURO = [
   '--sombra:0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .3)', '--sombra-forte:0 20px 60px rgba(0, 0, 0, .6)',
 ].join(';');
 
-export const APARENCIA_PADRAO = { paleta: 'vidroBordo', fonte: 'outfit' };
+export const APARENCIA_PADRAO = { paleta: 'vidroTerra', fonte: 'outfit' };
 
 function variaveis(t, f) {
   const v = [
