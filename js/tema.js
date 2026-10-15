@@ -2,22 +2,26 @@
 // Cada paleta define os tons do tema claro e do escuro; o restante da interface
 // (superfícies, textos, cores de situação) vem de css/style.css.
 
+// Estilo vidro escuro: base azul-marinho com uma cor de destaque.
+function vidro(nome, c) {
+  const t = {
+    acento: '#5b8cf0', acentoTinta: '#ffffff', suave: 'rgba(91, 140, 240, .16)', fundo: '#12234a', lateral: '#0c1834',
+    lateralBg: 'rgba(8, 16, 38, .55)', lateral2: 'rgba(255, 255, 255, .07)', lateralTinta: '#b4c1dc', lateralForte: '#ffffff', lateralBorda: 'rgba(160, 185, 255, .14)',
+    ouro: c.forte, d1: '#2a56b8', d2: '#13295e', brilho: '#5b8cf0', luz: c.luz, luzClaro: c.claro, luzTinta: c.tinta,
+    fundoImagem: `radial-gradient(at 8% 6%, #2b55ad 0, transparent 42%), radial-gradient(at 92% 8%, ${c.reflexo} 0, transparent 38%), radial-gradient(at 78% 92%, #2c3d93 0, transparent 48%), radial-gradient(at 8% 96%, #1a4b86 0, transparent 40%), #12234a`,
+    superficie: 'rgba(255, 255, 255, .075)', superficie2: 'rgba(255, 255, 255, .055)', linha: 'rgba(170, 195, 255, .14)', vidroBorda: 'rgba(190, 210, 255, .18)', vidroBrilho: 'rgba(255, 255, 255, .10)',
+  };
+  return { nome, estilo: 'vidro', sempreEscuro: true, claro: t, escuro: t };
+}
+
+const VIDROS = {
+  vidro: vidro('Vidro · azul e turquesa', { luz: '#2ccfe0', claro: '#7ee8f2', forte: '#13a7ba', tinta: '#04252c', reflexo: '#0f5f70' }),
+  vidroDourado: vidro('Vidro · azul e dourado', { luz: '#e0b24a', claro: '#f3d58a', forte: '#b98a2b', tinta: '#2a1d05', reflexo: '#5a4416' }),
+  vidroLilas: vidro('Vidro · azul e lilás', { luz: '#b39bff', claro: '#d6c9ff', forte: '#8a6cf0', tinta: '#1c1240', reflexo: '#46338f' }),
+};
+
 export const PALETAS = {
-  vidro: {
-    nome: 'Vidro escuro (azul e laranja)',
-    estilo: 'vidro',
-    sempreEscuro: true,
-    claro: {
-      acento: '#4a7fe6', acentoTinta: '#ffffff', suave: 'rgba(74, 127, 230, .16)', fundo: '#060b18', lateral: '#060b18', lateralBg: 'rgba(14, 24, 52, .5)', lateral2: 'rgba(255, 255, 255, .06)', lateralTinta: '#a9b6d4', lateralForte: '#ffffff', lateralBorda: 'rgba(150, 175, 255, .12)', ouro: '#c85f15', d1: '#1f4594', d2: '#0d1f4a', brilho: '#4a7fe6', luz: '#e0701a', luzClaro: '#f0904a',
-      fundoImagem: 'radial-gradient(at 10% 5%, #163276 0, transparent 45%), radial-gradient(at 90% 8%, #3b200f 0, transparent 35%), radial-gradient(at 75% 90%, #1d2a6e 0, transparent 50%), radial-gradient(at 10% 95%, #0f2c5a 0, transparent 40%), #060b18',
-      superficie: 'rgba(22, 36, 74, .42)', superficie2: 'rgba(255, 255, 255, .05)', linha: 'rgba(150, 175, 255, .12)', vidroBorda: 'rgba(150, 175, 255, .14)', vidroBrilho: 'rgba(255, 255, 255, .06)',
-    },
-    escuro: {
-      acento: '#4a7fe6', acentoTinta: '#ffffff', suave: 'rgba(74, 127, 230, .16)', fundo: '#060b18', lateral: '#060b18', lateralBg: 'rgba(14, 24, 52, .5)', lateral2: 'rgba(255, 255, 255, .06)', lateralTinta: '#a9b6d4', lateralForte: '#ffffff', lateralBorda: 'rgba(150, 175, 255, .12)', ouro: '#c85f15', d1: '#1f4594', d2: '#0d1f4a', brilho: '#4a7fe6', luz: '#e0701a', luzClaro: '#f0904a',
-      fundoImagem: 'radial-gradient(at 10% 5%, #163276 0, transparent 45%), radial-gradient(at 90% 8%, #3b200f 0, transparent 35%), radial-gradient(at 75% 90%, #1d2a6e 0, transparent 50%), radial-gradient(at 10% 95%, #0f2c5a 0, transparent 40%), #060b18',
-      superficie: 'rgba(22, 36, 74, .42)', superficie2: 'rgba(255, 255, 255, .05)', linha: 'rgba(150, 175, 255, .12)', vidroBorda: 'rgba(150, 175, 255, .14)', vidroBrilho: 'rgba(255, 255, 255, .06)',
-    },
-  },
+  ...VIDROS,
   moderno: {
     nome: 'Moderno claro',
     claro: { acento: '#2563eb', suave: '#e8efff', fundo: '#f5f7fb', lateral: '#ffffff', lateral2: '#eef3ff', lateralTinta: '#5b6474', lateralForte: '#1d4ed8', lateralBorda: '#e3e8f0', ouro: '#f97316', d1: '#1d4ed8', d2: '#1e3a8a', brilho: '#3b82f6', luz: '#f97316' },
@@ -88,6 +92,7 @@ function variaveis(t, f) {
   if (t.fundoImagem) v.push(`--fundo-imagem:${t.fundoImagem}`);
   if (t.luzClaro) v.push(`--luz-claro:${t.luzClaro}`);
   if (t.acentoTinta) v.push(`--acento-tinta:${t.acentoTinta}`);
+  if (t.luzTinta) v.push(`--luz-tinta:${t.luzTinta}`);
   if (t.vidroBorda) v.push(`--vidro-borda:${t.vidroBorda}`, `--vidro-brilho:${t.vidroBrilho}`);
   if (t.superficie) v.push(`--superficie:${t.superficie}`, `--superficie-2:${t.superficie2}`, `--linha:${t.linha}`);
   if (f) v.push(`--f-titulo:${f.titulo}`, `--f-texto:${f.texto}`);
