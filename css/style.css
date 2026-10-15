@@ -29,7 +29,7 @@
   --f-titulo: 'Newsreader', Georgia, 'Times New Roman', serif;
   --f-texto: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --f-dado: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  --raio: 14px;
+  --raio: 16px;
   --raio-p: 9px;
 }
 @media (prefers-color-scheme: dark) {
@@ -69,15 +69,15 @@ button { cursor: pointer; }
 
 /* ---------- estrutura ---------- */
 .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
-.lateral { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 22px; padding: 24px 16px; background: var(--lateral); color: var(--lateral-tinta); }
+.lateral { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 22px; padding: 24px 16px; background: var(--lateral-bg, var(--lateral)); color: var(--lateral-tinta); border-right: 1px solid var(--lateral-borda, transparent); }
 .marca { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
 .marca-ic { width: 34px; height: 34px; padding: 6px; border-radius: 10px; color: var(--luz); background: var(--lateral-2); }
-.marca strong { display: block; font: 600 1.2rem/1.1 var(--f-titulo); color: #fff; letter-spacing: -.01em; }
+.marca strong { display: block; font: 600 1.2rem/1.1 var(--f-titulo); color: var(--lateral-forte, #fff); letter-spacing: -.01em; }
 .marca small { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
 .nav { display: grid; gap: 2px; }
 .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--lateral-tinta); font-weight: 500; text-align: left; position: relative; }
-.nav-item:hover { background: var(--lateral-2); color: #fff; }
-.nav-item.ativo { background: var(--lateral-2); color: #fff; }
+.nav-item:hover { background: var(--lateral-2); color: var(--lateral-forte, #fff); }
+.nav-item.ativo { background: var(--lateral-2); color: var(--lateral-forte, #fff); font-weight: 600; }
 .nav-item.ativo::before { content: ''; position: absolute; left: -16px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--luz); }
 .nav-item .ic { opacity: .85; }
 .badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--hoje); color: #fff; font-size: .72rem; font-weight: 700; display: inline-grid; place-items: center; }

@@ -10,9 +10,9 @@ const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julh
 const MESES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 let estado = carregar() || estadoVazio();
-if (!estado.config.temaAzul) {
-  estado.config.aparencia = { ...(estado.config.aparencia || {}), paleta: 'azul' };
-  estado.config.temaAzul = true;
+if (!estado.config.temaModerno) {
+  estado.config.aparencia = { ...(estado.config.aparencia || {}), paleta: 'moderno' };
+  estado.config.temaModerno = true;
   salvar(estado);
 }
 const ui = {

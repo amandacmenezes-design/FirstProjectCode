@@ -3,8 +3,23 @@
 // (superfícies, textos, cores de situação) vem de css/style.css.
 
 export const PALETAS = {
+  moderno: {
+    nome: 'Moderno claro',
+    claro: { acento: '#2563eb', suave: '#e8efff', fundo: '#f5f7fb', lateral: '#ffffff', lateral2: '#eef3ff', lateralTinta: '#5b6474', lateralForte: '#1d4ed8', lateralBorda: '#e3e8f0', ouro: '#f97316', d1: '#1d4ed8', d2: '#1e3a8a', brilho: '#3b82f6', luz: '#f97316' },
+    escuro: { acento: '#6ea8ff', suave: '#16233d', fundo: '#0b0f17', lateral: '#0f141d', lateral2: '#1a2333', lateralTinta: '#9aa6b8', lateralBorda: '#1f2937', d1: '#1d3b7a', d2: '#111c33', brilho: '#2b5fd0', luz: '#fb923c' },
+  },
+  gradiente: {
+    nome: 'Gradiente azul',
+    claro: { acento: '#2556d8', suave: '#e7eeff', fundo: '#f4f6fb', lateral: '#1b2a7a', lateralBg: 'linear-gradient(180deg, #2453d4 0%, #1b2a7a 100%)', lateral2: 'rgba(255, 255, 255, .14)', lateralTinta: '#d4ddff', ouro: '#f97316', d1: '#2453d4', d2: '#1b2a7a', brilho: '#5b8cff', luz: '#ff8a3d' },
+    escuro: { acento: '#7aa2ff', suave: '#18224a', fundo: '#0a0d1a', lateral: '#0f164a', lateralBg: 'linear-gradient(180deg, #1a3aa0 0%, #0f164a 100%)', lateral2: 'rgba(255, 255, 255, .12)', lateralTinta: '#c3cdf5', d1: '#1a3aa0', d2: '#0f164a', brilho: '#3c66e0', luz: '#ff8a3d' },
+  },
+  petroleo: {
+    nome: 'Petróleo e coral',
+    claro: { acento: '#0f766e', suave: '#e0f2ef', fundo: '#f4f7f6', lateral: '#ffffff', lateral2: '#e6f4f1', lateralTinta: '#5b6670', lateralForte: '#0f766e', lateralBorda: '#e2e8e6', ouro: '#f26b4f', d1: '#115e59', d2: '#0b3b38', brilho: '#14b8a6', luz: '#f97352' },
+    escuro: { acento: '#4fd1c1', suave: '#12302d', fundo: '#0a1110', lateral: '#0f1716', lateral2: '#182725', lateralTinta: '#9fb0ad', lateralBorda: '#1f2b29', d1: '#115e59', d2: '#0b3b38', brilho: '#0f8f84', luz: '#f97352' },
+  },
   azul: {
-    nome: 'Azul e laranja',
+    nome: 'Azul e laranja escuro',
     claro: { acento: '#163f80', suave: '#e2e9f5', fundo: '#eef1f6', lateral: '#081a33', lateral2: '#10294f', lateralTinta: '#b3c1d8', ouro: '#c2560f', d1: '#0b2347', d2: '#06152c', brilho: '#1a4a8f', luz: '#dd6a17' },
     escuro: { acento: '#6f9ce6', suave: '#142540', fundo: '#090f1b', lateral: '#050b16', lateral2: '#0f2242', d1: '#0b2347', d2: '#06152c', brilho: '#18427f', luz: '#e0701a' },
   },
@@ -37,7 +52,7 @@ export const FONTES = {
   classica: { nome: 'Clássica', descricao: 'Newsreader + Plus Jakarta Sans', titulo: "'Newsreader', Georgia, serif", texto: "'Plus Jakarta Sans', system-ui, sans-serif" },
 };
 
-export const APARENCIA_PADRAO = { paleta: 'azul', fonte: 'outfit' };
+export const APARENCIA_PADRAO = { paleta: 'moderno', fonte: 'outfit' };
 
 function variaveis(t, f) {
   const v = [
@@ -45,7 +60,8 @@ function variaveis(t, f) {
     `--lateral:${t.lateral}`, `--lateral-2:${t.lateral2}`,
     `--destaque-1:${t.d1}`, `--destaque-2:${t.d2}`, `--destaque-brilho:${t.brilho}`, `--luz:${t.luz}`,
   ];
-  if (t.lateralTinta) v.push(`--lateral-tinta:${t.lateralTinta}`);
+  v.push(`--lateral-tinta:${t.lateralTinta || '#a9b6cc'}`, `--lateral-forte:${t.lateralForte || '#ffffff'}`,
+    `--lateral-bg:${t.lateralBg || t.lateral}`, `--lateral-borda:${t.lateralBorda || 'transparent'}`);
   if (t.ouro) v.push(`--ouro:${t.ouro}`);
   if (f) v.push(`--f-titulo:${f.titulo}`, `--f-texto:${f.texto}`);
   return v.join(';');
