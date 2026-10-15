@@ -33,7 +33,7 @@ A página `teste-djen.html` faz um diagnóstico da conexão com a API a partir d
 
 ## Privacidade
 
-Os dados (processos, prazos e tarefas) ficam **apenas no navegador** de quem usa o painel (`localStorage`). Nada é enviado a servidor e nada é gravado neste repositório, que é público. Use a função de backup em **Ajustes** para guardar uma cópia ou levar os dados a outro aparelho. Nunca faça commit de arquivos de backup.
+Os dados (processos, prazos e tarefas) ficam **apenas no navegador** de quem usa o painel (`localStorage`). Nada é gravado neste repositório, que é público. A única informação enviada para fora é o número do processo, quando a senhora usa a busca no DJEN, e apenas à API pública do CNJ. Use a função de backup em **Ajustes** para guardar uma cópia ou levar os dados a outro aparelho. Nunca faça commit de arquivos de backup.
 
 ## Como usar
 
