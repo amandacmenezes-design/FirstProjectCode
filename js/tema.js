@@ -25,10 +25,20 @@ const VIDROS = {
     d1: '#138fa1', d2: '#0a434d', luz: '#8b98ff', luzClaro: '#bcc4ff', forte: '#5b6cf0', luzTinta: '#11163a',
     brilho1: 'rgba(44, 207, 224, .16)', brilho2: 'rgba(139, 152, 255, .14)',
   }),
-  vidroOuro: vidro('Vidro · preto e dourado', {
-    base: '#0c0b0a', lateral: '#080706', acento: '#e0b24a', acentoClaro: '#f3d58a', acentoTinta: '#2a1d05', suave: 'rgba(224, 178, 74, .15)',
-    d1: '#a8791f', d2: '#3d2b0c', luz: '#e8dcc2', luzClaro: '#f6efe0', forte: '#c9b48a', luzTinta: '#2a2112',
-    brilho1: 'rgba(224, 178, 74, .16)', brilho2: 'rgba(232, 220, 194, .08)',
+  vidroVerde: vidro('Vidro · preto e esmeralda', {
+    base: '#0b0c10', lateral: '#08090c', acento: '#34d399', acentoClaro: '#86efc4', acentoTinta: '#04291c', suave: 'rgba(52, 211, 153, .15)',
+    d1: '#0f9e6e', d2: '#073b2a', luz: '#7cc4ff', luzClaro: '#b8e0ff', forte: '#3b9be0', luzTinta: '#06243a',
+    brilho1: 'rgba(52, 211, 153, .16)', brilho2: 'rgba(124, 196, 255, .10)',
+  }),
+  vidroVioleta: vidro('Vidro · preto e violeta', {
+    base: '#0b0c10', lateral: '#08090c', acento: '#8b7bff', acentoClaro: '#b9afff', acentoTinta: '#ffffff', suave: 'rgba(139, 123, 255, .16)',
+    d1: '#6a55f0', d2: '#2a1f6b', luz: '#f472b6', luzClaro: '#f9a8d4', forte: '#db4f9a', luzTinta: '#3a0a24',
+    brilho1: 'rgba(139, 123, 255, .18)', brilho2: 'rgba(244, 114, 182, .10)',
+  }),
+  vidroRose: vidro('Vidro · preto e rosé', {
+    base: '#0b0c10', lateral: '#08090c', acento: '#f28cb1', acentoClaro: '#f8bdd2', acentoTinta: '#3a0f20', suave: 'rgba(242, 140, 177, .15)',
+    d1: '#c9577f', d2: '#4a1a2c', luz: '#c4b5fd', luzClaro: '#ddd6fe', forte: '#9f8cf0', luzTinta: '#1c1240',
+    brilho1: 'rgba(242, 140, 177, .15)', brilho2: 'rgba(196, 181, 253, .10)',
   }),
 };
 
