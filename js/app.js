@@ -3,18 +3,13 @@ import { PRESETS } from './feriados.js';
 import { PRAZOS_USUAIS, calcularPrazo, criarCalendario, situacao } from './prazos.js';
 import { analisarNumeroCnj } from './cnj.js';
 import { buscarComunicacoes, sugerirPrazo } from './djen.js';
-import { APARENCIA_PADRAO, FONTES, PALETAS, cssDoTema, estiloDoTema } from './tema.js';
+import { APARENCIA_PADRAO, ESTILO, FONTES, cssDoTema } from './tema.js';
 import { carregar, estadoVazio, normalizar, novoId, salvar } from './store.js';
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const MESES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 let estado = carregar() || estadoVazio();
-if (!estado.config.temaTerra) {
-  estado.config.aparencia = { ...(estado.config.aparencia || {}), paleta: 'vidroTerra' };
-  estado.config.temaTerra = true;
-  salvar(estado);
-}
 const ui = {
   aba: 'painel',
   gaveta: null, // 'prazo' | 'processo' | null
@@ -465,14 +460,7 @@ function telaAjustes() {
   return `
     <div class="ajustes">
       <section class="cartao">
-        <header class="cartao-cab"><h2>Aparência</h2><span class="sub">A escolha vale na hora</span></header>
-        <h3 class="sub-titulo">Cores</h3>
-        <div class="temas">${Object.entries(PALETAS).map(([k, p]) => `
-          <button class="tema ${aparencia().paleta === k ? 'ativo' : ''}" data-acao="paleta" data-valor="${k}" aria-pressed="${aparencia().paleta === k}" style="--p-acento:${p.claro.acento};--p-luz:${p.claro.luz}">
-            <span class="tema-previa"><span class="tl" style="background:${p.claro.lateral}"><i></i><i></i><i></i></span><span class="tc" style="background:${p.claro.fundo}"><i style="height:40%"></i><i style="height:85%"></i><i style="height:60%"></i></span></span>
-            <span class="tema-nome">${esc(p.nome)}${aparencia().paleta === k ? ic('check') : ''}</span>
-          </button>`).join('')}</div>
-        <h3 class="sub-titulo">Fonte</h3>
+        <header class="cartao-cab"><h2>Fonte</h2><span class="sub">A escolha vale na hora</span></header>
         <div class="fontes">${Object.entries(FONTES).map(([k, f]) => `
           <button class="fonte-op ${aparencia().fonte === k ? 'ativo' : ''}" data-acao="fonte" data-valor="${k}" aria-pressed="${aparencia().fonte === k}">
             <small>${esc(f.nome)} · ${esc(f.descricao)}</small>
@@ -752,7 +740,7 @@ function aplicarTema() {
   if (!el) { el = document.createElement('style'); el.id = 'tema-painel'; document.head.append(el); }
   const css = cssDoTema(aparencia());
   if (el.textContent !== css) el.textContent = css;
-  document.documentElement.dataset.estilo = estiloDoTema(aparencia());
+  document.documentElement.dataset.estilo = ESTILO;
 }
 
 function render() {
@@ -861,7 +849,6 @@ app.addEventListener('click', async (ev) => {
     }
     case 'cumprir': Object.assign(acharPrazo(), { cumprido: true, cumpridoEm: hojeIso() }); persistir('Baixa registrada no prazo.'); break;
     case 'ir-prazos': ui.aba = 'prazos'; ui.filtroPrazos = valor; render(); window.scrollTo(0, 0); break;
-    case 'paleta': estado.config.aparencia = { ...aparencia(), paleta: valor }; persistir('Cores aplicadas.'); break;
     case 'fonte': estado.config.aparencia = { ...aparencia(), fonte: valor }; persistir('Fonte aplicada.'); break;
     case 'reabrir': acharPrazo().cumprido = false; persistir('Prazo reaberto.'); break;
     case 'concluir': estado.tarefas.find((t) => t.id === id).concluida = true; persistir('Tarefa concluída.'); break;

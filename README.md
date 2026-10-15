@@ -63,7 +63,7 @@ js/prazos.js                calendário forense e cálculo de prazos
 js/cnj.js                   validação do número CNJ
 js/djen.js                  consulta ao DJEN e sugestão de prazo
 js/store.js                 armazenamento local
-js/tema.js                  paletas de cores e fontes (Ajustes → Aparência)
+js/tema.js                  identidade visual (vidro, marrom terroso e azul-escuro) e fontes
 js/app.js                   interface
 tests/*.test.mjs            testes automatizados
 teste-djen.html             diagnóstico da API do DJEN
