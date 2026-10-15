@@ -7,14 +7,14 @@ export const PALETAS = {
     nome: 'Vidro (azul e laranja)',
     estilo: 'vidro',
     claro: {
-      acento: '#2f5bea', suave: 'rgba(47, 91, 234, .12)', fundo: '#eef2fb', lateral: '#eef2fb', lateralBg: 'rgba(255, 255, 255, .42)', lateral2: 'rgba(255, 255, 255, .75)', lateralTinta: '#4a5568', lateralForte: '#1f3fb8', lateralBorda: 'rgba(255, 255, 255, .75)', ouro: '#f97316', d1: '#3a63f0', d2: '#1e2f8f', brilho: '#8aa6ff', luz: '#ff8a3d',
-      fundoImagem: 'radial-gradient(at 8% 8%, #c6d6ff 0, transparent 45%), radial-gradient(at 92% 10%, #ffd6b8 0, transparent 40%), radial-gradient(at 72% 88%, #dcd0ff 0, transparent 45%), radial-gradient(at 12% 92%, #c4efff 0, transparent 40%), #eef2fb',
-      superficie: 'rgba(255, 255, 255, .58)', superficie2: 'rgba(255, 255, 255, .5)', linha: 'rgba(30, 45, 90, .10)',
+      acento: '#163f80', suave: 'rgba(22, 63, 128, .12)', fundo: '#e9eef7', lateral: '#e9eef7', lateralBg: 'rgba(255, 255, 255, .42)', lateral2: 'rgba(255, 255, 255, .75)', lateralTinta: '#475268', lateralForte: '#163f80', lateralBorda: 'rgba(255, 255, 255, .75)', ouro: '#b8520f', d1: '#1b3f86', d2: '#0b1f45', brilho: '#2f5fb5', luz: '#dd6a17', luzClaro: '#ee8d45',
+      fundoImagem: 'radial-gradient(at 8% 8%, #b9c9ea 0, transparent 45%), radial-gradient(at 92% 10%, #f3c6a2 0, transparent 40%), radial-gradient(at 72% 88%, #ccc6ec 0, transparent 45%), radial-gradient(at 12% 92%, #bfdcef 0, transparent 40%), #e9eef7',
+      superficie: 'rgba(255, 255, 255, .58)', superficie2: 'rgba(255, 255, 255, .5)', linha: 'rgba(20, 35, 75, .10)',
     },
     escuro: {
-      acento: '#8aa8ff', suave: 'rgba(138, 168, 255, .16)', fundo: '#0b1022', lateral: '#0b1022', lateralBg: 'rgba(20, 28, 52, .45)', lateral2: 'rgba(255, 255, 255, .08)', lateralTinta: '#a9b4cc', lateralForte: '#ffffff', lateralBorda: 'rgba(255, 255, 255, .08)', d1: '#2f4fd0', d2: '#16205a', brilho: '#5a7dff', luz: '#ff9a52',
-      fundoImagem: 'radial-gradient(at 8% 8%, #1d2f7a 0, transparent 45%), radial-gradient(at 92% 10%, #5a2a14 0, transparent 40%), radial-gradient(at 72% 88%, #33206e 0, transparent 45%), #0b1022',
-      superficie: 'rgba(22, 30, 56, .55)', superficie2: 'rgba(255, 255, 255, .06)', linha: 'rgba(255, 255, 255, .09)',
+      acento: '#7f9fe0', suave: 'rgba(127, 159, 224, .16)', fundo: '#0a0f1e', lateral: '#0a0f1e', lateralBg: 'rgba(18, 26, 50, .45)', lateral2: 'rgba(255, 255, 255, .08)', lateralTinta: '#a9b4cc', lateralForte: '#ffffff', lateralBorda: 'rgba(255, 255, 255, .08)', d1: '#1b3f86', d2: '#0b1f45', brilho: '#2f5fb5', luz: '#e0701a', luzClaro: '#ee8d45',
+      fundoImagem: 'radial-gradient(at 8% 8%, #172a63 0, transparent 45%), radial-gradient(at 92% 10%, #4f2410 0, transparent 40%), radial-gradient(at 72% 88%, #2a1c5c 0, transparent 45%), #0a0f1e',
+      superficie: 'rgba(20, 28, 52, .55)', superficie2: 'rgba(255, 255, 255, .06)', linha: 'rgba(255, 255, 255, .09)',
     },
   },
   moderno: {
@@ -78,6 +78,7 @@ function variaveis(t, f) {
     `--lateral-bg:${t.lateralBg || t.lateral}`, `--lateral-borda:${t.lateralBorda || 'transparent'}`);
   if (t.ouro) v.push(`--ouro:${t.ouro}`);
   if (t.fundoImagem) v.push(`--fundo-imagem:${t.fundoImagem}`);
+  if (t.luzClaro) v.push(`--luz-claro:${t.luzClaro}`);
   if (t.superficie) v.push(`--superficie:${t.superficie}`, `--superficie-2:${t.superficie2}`, `--linha:${t.linha}`);
   if (f) v.push(`--f-titulo:${f.titulo}`, `--f-texto:${f.texto}`);
   return v.join(';');

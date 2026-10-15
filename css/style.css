@@ -533,7 +533,7 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
   box-shadow: 0 8px 18px color-mix(in srgb, var(--acento) 35%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45), inset 0 -3px 6px rgba(0, 0, 0, .12);
 }
 :root[data-estilo="vidro"] .kpi:nth-child(2) .kpi-ic, :root[data-estilo="vidro"] .kpi:nth-child(4) .kpi-ic {
-  background: linear-gradient(140deg, #ffb37a, var(--luz) 70%);
+  background: linear-gradient(140deg, var(--luz-claro, #ffb37a), var(--luz) 70%);
   box-shadow: 0 8px 18px color-mix(in srgb, var(--luz) 40%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45), inset 0 -3px 6px rgba(0, 0, 0, .12);
 }
 :root[data-estilo="vidro"] .kpi-ic .ic { width: 21px; height: 21px; }
@@ -548,7 +548,7 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
   color: #fff; background: linear-gradient(140deg, var(--destaque-brilho), var(--acento) 70%);
   box-shadow: 0 6px 14px color-mix(in srgb, var(--acento) 40%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45);
 }
-:root[data-estilo="vidro"] .marca-ic { border-radius: 50%; color: #fff; background: linear-gradient(140deg, #ffb37a, var(--luz) 70%); box-shadow: 0 6px 14px color-mix(in srgb, var(--luz) 40%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45); }
+:root[data-estilo="vidro"] .marca-ic { border-radius: 50%; color: #fff; background: linear-gradient(140deg, var(--luz-claro, #ffb37a), var(--luz) 70%); box-shadow: 0 6px 14px color-mix(in srgb, var(--luz) 40%, transparent), inset 0 2px 3px rgba(255, 255, 255, .45); }
 :root[data-estilo="vidro"] .destaque-ic, :root[data-estilo="vidro"] .vazio-ic { border-radius: 50%; }
 :root[data-estilo="vidro"] .btn-icone { border-radius: 50%; background: var(--superficie); }
 :root[data-estilo="vidro"] .dia { border-radius: 16px; background: var(--superficie); border-color: transparent; box-shadow: 0 3px 8px rgba(20, 30, 70, .06); }
