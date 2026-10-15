@@ -2,6 +2,7 @@ import { ISO_RE, addDias, criarIso, diaSemana, formatar, hojeIso, nomeDiaSemana 
 import { PRESETS } from './feriados.js';
 import { PRAZOS_USUAIS, calcularPrazo, criarCalendario, situacao } from './prazos.js';
 import { analisarNumeroCnj } from './cnj.js';
+import { buscarComunicacoes, sugerirPrazo } from './djen.js';
 import { carregar, estadoExemplo, estadoVazio, normalizar, novoId, salvar } from './store.js';
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -18,6 +19,7 @@ const ui = {
   mesCal: hojeIso().slice(0, 7),
   diaSel: hojeIso(),
   processoEdit: null,
+  djen: { estado: 'ocioso', itens: [], erro: '', escolhida: null },
 };
 let rascunho = rascunhoNovo();
 let mensagem = null;
@@ -26,7 +28,9 @@ let mensagemErro = false;
 const app = document.getElementById('app');
 
 function rascunhoNovo(extra = {}) {
-  return { id: null, dataMarco: hojeIso(), marco: 'disponibilizacao', contagem: 'uteis', dias: 15, dobro: false, suspenderRecesso: true, descricao: '', processoId: '', ...extra };
+  const base = { id: null, dataMarco: hojeIso(), marco: 'disponibilizacao', contagem: 'uteis', dias: 15, dobro: false, suspenderRecesso: true, descricao: '', processoId: '', numeroBusca: '', publicacao: null, ...extra };
+  if (!base.numeroBusca && base.processoId) base.numeroBusca = estado.processos.find((p) => p.id === base.processoId)?.numero || '';
+  return base;
 }
 
 // ---------- ícones ----------
@@ -441,6 +445,90 @@ function htmlResultado() {
   }
 }
 
+function htmlDjen() {
+  const d = ui.djen;
+  const aviso = '<p class="nota djen-nota">Intimações feitas pelo painel do sistema processual (ciência expressa ou tácita) não aparecem no DJEN. Se nada for encontrado, confira o processo no sistema do tribunal.</p>';
+  if (d.estado === 'ocioso') {
+    return rascunho.publicacao
+      ? `<div class="pub-escolhida">${ic('check')}<span>Marco baseado na publicação de <strong>${formatar(rascunho.publicacao.data)}</strong> (${esc(rascunho.publicacao.tipoDocumento)}).</span></div>`
+      : '<p class="nota">Busque as publicações do processo no Diário de Justiça Eletrônico Nacional e escolha a que inicia o prazo. O marco e a data serão preenchidos automaticamente.</p>';
+  }
+  if (d.estado === 'carregando') return '<div class="djen-carregando"><span class="giro" aria-hidden="true"></span>Consultando o DJEN… pode levar alguns segundos.</div>';
+  if (d.estado === 'erro') return `<div class="res res-erro">${ic('alerta')}<span>${esc(d.erro)}</span></div>`;
+  if (!d.itens.length) return `<div class="vazio vazio-p"><strong>Nenhuma publicação encontrada</strong><span>O DJEN não tem comunicações para este número.</span></div>${aviso}`;
+  return `
+    <p class="sub">${plural(d.itens.length, 'publicação encontrada', 'publicações encontradas')} · da mais recente para a mais antiga</p>
+    <ul class="pubs">${d.itens.map((c, i) => {
+      const sug = sugerirPrazo(c.texto, c.tipoDocumento);
+      return `
+      <li class="pub ${d.escolhida === i ? 'escolhida' : ''} ${c.cancelada ? 'cancelada' : ''}">
+        <div class="pub-cab">
+          <span class="pub-data mono">${formatar(c.data)}</span>
+          <span class="tag tag-prazo">${esc(c.tipoDocumento)}</span>
+          ${c.cancelada ? '<span class="chip chip-vencido">Cancelada</span>' : ''}
+        </div>
+        <div class="sub">${esc([c.tribunal, c.orgao].filter(Boolean).join(' · '))}</div>
+        <details class="pub-texto"><summary>${esc(c.texto.slice(0, 180))}${c.texto.length > 180 ? '…' : ''}</summary><p>${esc(c.texto)}</p>${c.link ? `<a href="${esc(c.link)}" target="_blank" rel="noopener">Abrir documento original</a>` : ''}</details>
+        ${sug ? `<div class="pub-sug">${ic('calc')}<span>${sug.fonte === 'texto' ? `Prazo identificado no texto: <strong>${sug.dias} dias${sug.contagem === 'corridos' ? ' corridos' : ''}</strong>` : `Sugestão pelo tipo de ato: <strong>${esc(sug.descricao)}, ${sug.dias} dias</strong>`}<small>“${esc(sug.trecho)}”</small></span></div>` : ''}
+        <button type="button" class="btn ${d.escolhida === i ? '' : 'btn-sec'} pub-usar" data-acao="usar-pub" data-valor="${i}" ${c.cancelada ? 'disabled' : ''}>${d.escolhida === i ? `${ic('check')}Publicação escolhida` : 'Usar esta publicação'}</button>
+      </li>`;
+    }).join('')}</ul>
+    ${aviso}`;
+}
+
+function atualizarDjen() {
+  const alvo = document.getElementById('djen-area');
+  if (alvo) alvo.innerHTML = htmlDjen();
+}
+
+async function buscarDjen() {
+  const form = document.getElementById('form-prazo');
+  lerRascunho(form);
+  const cnj = analisarNumeroCnj(rascunho.numeroBusca);
+  if (!cnj.formatado) {
+    ui.djen = { estado: 'erro', itens: [], erro: cnj.erro, escolhida: null };
+    atualizarDjen();
+    return;
+  }
+  form.numeroBusca.value = cnj.formatado;
+  rascunho.numeroBusca = cnj.formatado;
+  ui.djen = { estado: 'carregando', itens: [], erro: '', escolhida: null };
+  atualizarDjen();
+  try {
+    const itens = await buscarComunicacoes(cnj.formatado);
+    ui.djen = { estado: 'ok', itens, erro: '', escolhida: null };
+  } catch (e) {
+    ui.djen = { estado: 'erro', itens: [], erro: e.message, escolhida: null };
+  }
+  atualizarDjen();
+}
+
+function usarPublicacao(i) {
+  const c = ui.djen.itens[i];
+  const form = document.getElementById('form-prazo');
+  if (!c || !form) return;
+  ui.djen.escolhida = i;
+  form.querySelector('input[name=marco][value=disponibilizacao]').checked = true;
+  form.dataMarco.value = c.data;
+  const sug = sugerirPrazo(c.texto, c.tipoDocumento);
+  if (sug) {
+    form.dias.value = sug.dias;
+    if (sug.contagem) form.contagem.value = sug.contagem;
+    if (sug.descricao && !form.descricao.value) form.descricao.value = sug.descricao;
+  }
+  lerRascunho(form);
+  rascunho.publicacao = { id: c.id, data: c.data, tipoDocumento: c.tipoDocumento, orgao: c.orgao, tribunal: c.tribunal, classe: c.classe, link: c.link };
+  document.getElementById('linha-recesso').hidden = rascunho.contagem !== 'corridos';
+  atualizarDjen();
+  atualizarResultado();
+  mensagem = sug ? 'Publicação aplicada. Confira o ato e a quantidade de dias.' : 'Publicação aplicada. Informe o ato e a quantidade de dias.';
+  const t = document.createElement('div');
+  t.className = 'toast'; t.setAttribute('role', 'status'); t.innerHTML = `${ic('check')}<span>${esc(mensagem)}</span>`;
+  app.append(t); setTimeout(() => t.classList.add('saindo'), 2800); setTimeout(() => t.remove(), 3200);
+  mensagem = null;
+  form.descricao.focus();
+}
+
 function gavetaPrazo() {
   const r = rascunho;
   return `
@@ -448,13 +536,21 @@ function gavetaPrazo() {
       <header class="gaveta-cab"><h2>${r.id ? 'Prazo e memória de cálculo' : 'Novo prazo'}</h2><button type="button" class="btn-icone" data-acao="fechar" aria-label="Fechar">${ic('fechar')}</button></header>
       <div class="gaveta-corpo">
         <fieldset class="passo">
-          <legend><span class="passo-n">1</span>Ato processual</legend>
-          <label class="campo">Processo<select id="pz-processo" name="processoId">${opcoesProcesso(r.processoId)}</select></label>
+          <legend><span class="passo-n">1</span>Processo e publicação</legend>
+          <label class="campo">Processo cadastrado<select id="pz-processo" name="processoId">${opcoesProcesso(r.processoId, 'Nenhum (informe o número abaixo)')}</select></label>
+          <div class="busca-djen">
+            <label class="campo">Número CNJ<input id="pz-numero" name="numeroBusca" class="mono" inputmode="numeric" placeholder="0000000-00.0000.0.00.0000" value="${esc(r.numeroBusca)}"></label>
+            <button type="button" class="btn" data-acao="buscar-djen">${ic('busca')}Buscar no DJEN</button>
+          </div>
+          <div id="djen-area" aria-live="polite">${htmlDjen()}</div>
+        </fieldset>
+        <fieldset class="passo">
+          <legend><span class="passo-n">2</span>Ato processual</legend>
           <label class="campo">Ato / prazo<input id="pz-descricao" name="descricao" placeholder="Ex.: Contestação" value="${esc(r.descricao)}"></label>
           <div class="sugestoes" aria-label="Prazos usuais">${PRAZOS_USUAIS.map((u, i) => `<button type="button" class="sug ${r.descricao === u.nome ? 'ativo' : ''}" data-acao="usual" data-valor="${i}" title="${esc(u.base)}">${esc(u.nome)} <span>${u.dias}d</span></button>`).join('')}</div>
         </fieldset>
         <fieldset class="passo">
-          <legend><span class="passo-n">2</span>Marco inicial</legend>
+          <legend><span class="passo-n">3</span>Marco inicial</legend>
           <div class="opcoes-radio">
             <label class="radio"><input type="radio" name="marco" value="disponibilizacao" ${r.marco === 'disponibilizacao' ? 'checked' : ''}><span><strong>Disponibilização no DJe/DJEN</strong><small>Publicação no dia útil seguinte</small></span></label>
             <label class="radio"><input type="radio" name="marco" value="intimacao" ${r.marco === 'intimacao' ? 'checked' : ''}><span><strong>Intimação ou ciência</strong><small>Inclui juntada do mandado ou AR</small></span></label>
@@ -462,7 +558,7 @@ function gavetaPrazo() {
           <label class="campo">Data<input id="pz-data" type="date" name="dataMarco" value="${esc(r.dataMarco)}" required></label>
         </fieldset>
         <fieldset class="passo">
-          <legend><span class="passo-n">3</span>Contagem</legend>
+          <legend><span class="passo-n">4</span>Contagem</legend>
           <div class="linha-campos">
             <label class="campo">Dias<input id="pz-dias" type="number" min="1" max="3650" step="1" name="dias" value="${esc(r.dias)}" required></label>
             <label class="campo">Forma<select id="pz-contagem" name="contagem">
@@ -618,9 +714,11 @@ app.addEventListener('click', async (ev) => {
   switch (acao) {
     case 'ir': ui.aba = valor; ui.gaveta = null; render(); window.scrollTo(0, 0); break;
     case 'fechar': fecharGaveta(); break;
-    case 'abrir-prazo': rascunho = rascunhoNovo(); abrirGaveta('prazo'); break;
-    case 'prazo-para': rascunho = rascunhoNovo({ processoId: id }); abrirGaveta('prazo'); break;
-    case 'ver-prazo': rascunho = { ...acharPrazo() }; abrirGaveta('prazo'); break;
+    case 'abrir-prazo': rascunho = rascunhoNovo(); ui.djen = { estado: 'ocioso', itens: [], erro: '', escolhida: null }; abrirGaveta('prazo'); break;
+    case 'buscar-djen': buscarDjen(); break;
+    case 'usar-pub': usarPublicacao(Number(valor)); break;
+    case 'prazo-para': rascunho = rascunhoNovo({ processoId: id }); ui.djen = { estado: 'ocioso', itens: [], erro: '', escolhida: null }; abrirGaveta('prazo'); break;
+    case 'ver-prazo': rascunho = rascunhoNovo({ ...acharPrazo() }); ui.djen = { estado: 'ocioso', itens: [], erro: '', escolhida: null }; abrirGaveta('prazo'); break;
     case 'abrir-processo': ui.processoEdit = null; abrirGaveta('processo'); break;
     case 'editar-processo': ui.processoEdit = id; abrirGaveta('processo'); break;
     case 'usual': {
@@ -692,6 +790,11 @@ app.addEventListener('change', (ev) => {
     if (el.checked) s.add(el.dataset.valor); else s.delete(el.dataset.valor);
     estado.config.presets = [...s];
     persistir('Calendário atualizado; vencimentos recalculados.');
+  } else if (el.id === 'pz-processo') {
+    const p = processo(el.value);
+    if (p) el.form.numeroBusca.value = p.numero;
+    lerRascunho(el.form);
+    atualizarResultado();
   } else if (el.form?.id === 'form-prazo') {
     lerRascunho(el.form);
     document.getElementById('linha-recesso').hidden = rascunho.contagem !== 'corridos';
@@ -719,6 +822,7 @@ app.addEventListener('input', (ev) => {
 });
 
 document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' && ev.target.id === 'pz-numero') { ev.preventDefault(); buscarDjen(); return; }
   if (ev.key === 'Escape' && ui.gaveta) fecharGaveta();
 });
 
@@ -727,6 +831,7 @@ function lerRascunho(form) {
   rascunho = {
     ...rascunho,
     processoId: f.get('processoId') || '',
+    numeroBusca: (f.get('numeroBusca') || '').trim(),
     descricao: (f.get('descricao') || '').trim(),
     marco: f.get('marco'),
     dataMarco: f.get('dataMarco'),
@@ -749,14 +854,30 @@ app.addEventListener('submit', (ev) => {
       atualizarResultado();
       return;
     }
-    const dados = { ...rascunho, descricao: rascunho.descricao || 'Prazo' };
+    let criado = false;
+    if (!rascunho.processoId && rascunho.numeroBusca) {
+      const cnj = analisarNumeroCnj(rascunho.numeroBusca);
+      if (cnj.formatado) {
+        const existente = estado.processos.find((p) => p.numero === cnj.formatado);
+        if (existente) rascunho.processoId = existente.id;
+        else {
+          const pub = rascunho.publicacao || {};
+          const novo = { id: novoId(), numero: cnj.formatado, cliente: '', parteContraria: '', orgao: [pub.orgao, pub.tribunal].filter(Boolean).join(' · '), area: '', obs: pub.classe || '' };
+          estado.processos.push(novo);
+          rascunho.processoId = novo.id;
+          criado = true;
+        }
+      }
+    }
+    const { numeroBusca, ...semBusca } = rascunho;
+    const dados = { ...semBusca, descricao: rascunho.descricao || 'Prazo' };
     if (dados.id) {
       estado.prazos = estado.prazos.map((p) => (p.id === dados.id ? { ...p, ...dados } : p));
     } else {
       estado.prazos.push({ ...dados, id: novoId(), cumprido: false });
     }
     ui.gaveta = null;
-    persistir(rascunho.id ? 'Prazo atualizado.' : 'Prazo salvo e incluído na agenda.');
+    persistir(rascunho.id ? 'Prazo atualizado.' : criado ? 'Prazo salvo. O processo foi cadastrado com os dados do DJEN; complete o cliente em Processos.' : 'Prazo salvo e incluído na agenda.');
   } else if (form.id === 'form-processo') {
     const r = analisarNumeroCnj(f.numero);
     if (!r.formatado) { avisar(r.erro); return; }

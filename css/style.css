@@ -397,3 +397,29 @@ details > summary { cursor: pointer; font-weight: 600; color: var(--acento); fon
 .proc-rodape .btn { align-self: flex-start; }
 .proc { display: flex; flex-direction: column; }
 .proc-rodape { margin-top: auto; }
+
+/* ---------- busca no DJEN ---------- */
+.busca-djen { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.djen-carregando { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 12px; background: var(--acento-suave); color: var(--acento); font-weight: 600; font-size: .88rem; }
+.giro { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: girar .8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.pubs { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; max-height: 460px; overflow-y: auto; }
+.pub { display: grid; gap: 6px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--linha); background: var(--superficie-2); min-width: 0; }
+.pub.escolhida { border-color: var(--acento); background: var(--acento-suave); }
+.pub.cancelada { opacity: .55; }
+.pub-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pub-data { font-weight: 600; font-size: .95rem; }
+.pub-texto summary { color: var(--tinta); font-weight: 400; font-size: .84rem; line-height: 1.45; overflow-wrap: anywhere; }
+.pub-texto p { margin: 8px 0; font-size: .84rem; white-space: pre-line; overflow-wrap: anywhere; max-height: 260px; overflow-y: auto; padding: 10px; border-radius: 8px; background: var(--superficie); border: 1px solid var(--linha); }
+.pub-texto a { font-size: .84rem; color: var(--acento); font-weight: 600; }
+.pub-sug { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; background: var(--ouro-suave); font-size: .82rem; }
+.pub-sug .ic { color: var(--ouro); margin-top: 2px; }
+.pub-sug span { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.pub-sug small { color: var(--tinta-2); font-style: italic; }
+.pub-usar { justify-self: start; padding-block: 6px; }
+.pub-usar[disabled] { opacity: .5; cursor: not-allowed; }
+.pub-escolhida { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--ok-bg); color: var(--ok); font-size: .86rem; }
+.vazio-p { padding: 18px 12px; }
+.djen-nota { font-size: .78rem; margin-top: 8px; }
+@media (max-width: 420px) { .busca-djen { grid-template-columns: minmax(0, 1fr); } }
+body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }

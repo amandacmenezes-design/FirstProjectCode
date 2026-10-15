@@ -23,6 +23,14 @@ Feriados considerados automaticamente: os nacionais, Carnaval (segunda e terça)
 
 > A ferramenta é de apoio. Confira sempre o termo final com a certidão do sistema e com o calendário oficial do tribunal.
 
+## Busca automática no DJEN
+
+No formulário de novo prazo, informe o número CNJ do processo (ou escolha um processo cadastrado) e clique em **Buscar no DJEN**. O painel consulta a API pública do Diário de Justiça Eletrônico Nacional (`comunicaapi.pje.jus.br`, CNJ), lista as publicações do processo e, ao escolher uma, preenche o marco (data de disponibilização) e sugere a quantidade de dias quando o teor traz prazo expresso ("no prazo de 15 (quinze) dias"). A sugestão deve sempre ser conferida. Se o processo ainda não estiver cadastrado, ele é criado ao salvar o prazo, com o órgão julgador e a classe vindos do DJEN.
+
+Limitações: a API só atende acessos feitos do Brasil; a busca funciona na versão publicada no GitHub Pages (a versão de teste no claude.ai não pode acessar outros sites); e intimações feitas pelo painel do sistema processual (ciência expressa ou tácita) não aparecem no DJEN.
+
+A página `teste-djen.html` faz um diagnóstico da conexão com a API a partir do navegador.
+
 ## Privacidade
 
 Os dados (processos, prazos e tarefas) ficam **apenas no navegador** de quem usa o painel (`localStorage`). Nada é enviado a servidor e nada é gravado neste repositório, que é público. Use a função de backup em **Ajustes** para guardar uma cópia ou levar os dados a outro aparelho. Nunca faça commit de arquivos de backup.
@@ -53,12 +61,14 @@ js/datas.js                 utilitários de data
 js/feriados.js              Páscoa, feriados nacionais e regionais, recesso
 js/prazos.js                calendário forense e cálculo de prazos
 js/cnj.js                   validação do número CNJ
+js/djen.js                  consulta ao DJEN e sugestão de prazo
 js/store.js                 armazenamento local e dados de exemplo
 js/app.js                   interface
-tests/prazos.test.mjs       testes automatizados
+tests/*.test.mjs            testes automatizados
+teste-djen.html             diagnóstico da API do DJEN
 scripts/gerar-pagina-unica.mjs
 ```
 
 ## Próximos passos sugeridos
 
-Integração com a consulta ao DJEN por OAB, para importar intimações automaticamente; feriados municipais por comarca; lembretes por e-mail ou notificação; e sincronização entre aparelhos.
+Importação em lote das intimações da OAB do dia; feriados municipais por comarca; lembretes por e-mail ou notificação; e sincronização entre aparelhos.
