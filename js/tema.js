@@ -3,6 +3,11 @@
 // (superfícies, textos, cores de situação) vem de css/style.css.
 
 export const PALETAS = {
+  azul: {
+    nome: 'Azul e laranja',
+    claro: { acento: '#1f5fbf', suave: '#e4edfb', fundo: '#f1f4f9', lateral: '#0c2547', lateral2: '#163a6b', lateralTinta: '#b8c8e2', ouro: '#d9701a', d1: '#0f2f5c', d2: '#0a1f3d', brilho: '#2b6fd1', luz: '#ff9a3c' },
+    escuro: { acento: '#7fb0ff', suave: '#172a48', fundo: '#0a1220', lateral: '#060d1a', lateral2: '#13284a', d1: '#0f2a52', d2: '#081a33', brilho: '#1f4f99', luz: '#ff9a3c' },
+  },
   jade: {
     nome: 'Jade',
     claro: { acento: '#16805c', suave: '#e1f2ea', fundo: '#f1f5f3', lateral: '#0e3a31', lateral2: '#17503f', lateralTinta: '#b7d3c8', ouro: '#b07a1c', d1: '#0f4436', d2: '#0b2d25', brilho: '#1f7a5c', luz: '#8fe0b8' },
@@ -32,7 +37,7 @@ export const FONTES = {
   classica: { nome: 'Clássica', descricao: 'Newsreader + Plus Jakarta Sans', titulo: "'Newsreader', Georgia, serif", texto: "'Plus Jakarta Sans', system-ui, sans-serif" },
 };
 
-export const APARENCIA_PADRAO = { paleta: 'jade', fonte: 'outfit' };
+export const APARENCIA_PADRAO = { paleta: 'azul', fonte: 'outfit' };
 
 function variaveis(t, f) {
   const v = [
