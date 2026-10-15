@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico DJEN</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .diag { max-width: 760px; margin: 0 auto; padding-block: 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+  .diag h1 { font: 500 2rem/1.15 var(--f-titulo); }
+  .etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .etapas li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; }
+  .marca-etapa { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .8rem; font-weight: 700; background: var(--superficie-2); border: 1px solid var(--linha); }
+  .ok .marca-etapa { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+  .falha .marca-etapa { background: var(--vencido-bg); color: var(--vencido); border-color: transparent; }
+  .rodando .marca-etapa { background: var(--acento-suave); color: var(--acento); border-color: transparent; }
+  #resumo { width: 100%; min-height: 180px; }
+</style>
+</head>
+<body>
+<main class="diag">
+  <header>
+    <h1>Diagnóstico da API do DJEN</h1>
+    <p class="nota">Esta página verifica se o seu navegador consegue consultar a API pública do Diário de Justiça Eletrônico Nacional (CNJ) e se a busca por número de processo funciona. Nada é gravado nem enviado a outro lugar.</p>
+  </header>
+
+  <section class="cartao">
+    <form id="form" class="form tres" autocomplete="off">
+      <label class="campo">Número da OAB<input id="oab" value="27941" inputmode="numeric" required></label>
+      <label class="campo">Seccional<input id="uf" value="PA" maxlength="2" required></label>
+      <label class="campo larg">Número de um processo seu (opcional)<input id="proc" class="mono" placeholder="Se vazio, uso um processo encontrado pela OAB"></label>
+      <div class="form-acoes larg"><button class="btn" type="submit">Iniciar teste</button></div>
+    </form>
+  </section>
+
+  <section class="cartao">
+    <h2>Etapas</h2>
+    <ol class="etapas" id="etapas"></ol>
+  </section>
+
+  <section class="cartao">
+    <h2>Resumo para enviar ao Claude</h2>
+    <p class="nota">O resumo contém apenas informações técnicas (códigos de resposta, quantidades e nomes de campos), sem o texto das publicações. Copie e cole na conversa.</p>
+    <textarea id="resumo" class="area mono" readonly placeholder="O resumo aparece aqui ao final do teste."></textarea>
+    <div class="form-acoes"><button class="btn btn-sec" id="copiar" type="button">Copiar resumo</button></div>
+  </section>
+</main>
+
+<script type="module">
+const API = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
+const etapasEl = document.getElementById('etapas');
+const resumo = {};
+
+function hojeIso(desloc = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + desloc);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function etapa(texto) {
+  const li = document.createElement('li');
+  li.className = 'rodando';
+  li.innerHTML = '<span class="marca-etapa">…</span><span></span>';
+  li.lastChild.textContent = texto;
+  etapasEl.append(li);
+  return {
+    ok(det) { li.className = 'ok'; li.firstChild.textContent = '✓'; if (det) li.lastChild.textContent += ` — ${det}`; },
+    falha(det) { li.className = 'falha'; li.firstChild.textContent = '!'; if (det) li.lastChild.textContent += ` — ${det}`; },
+  };
+}
+
+async function consultar(params) {
+  const url = `${API}?${new URLSearchParams(params)}`;
+  const inicio = performance.now();
+  try {
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    const texto = await r.text();
+    let json = null;
+    try { json = JSON.parse(texto); } catch { /* não é JSON */ }
+    return { status: r.status, json, ms: Math.round(performance.now() - inicio), inicioTexto: json ? null : texto.slice(0, 160) };
+  } catch (e) {
+    return { erroRede: String(e && e.message || e), ms: Math.round(performance.now() - inicio) };
+  }
+}
+
+function itensDe(json) {
+  if (!json) return [];
+  return json.items || json.itens || json.content || json.data || [];
+}
+
+const numeroDe = (item) => String(item.numero_processo || item.numeroProcesso || item.numeroprocessocommascara || '').replace(/\D/g, '');
+
+document.getElementById('form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  etapasEl.textContent = '';
+  for (const k of Object.keys(resumo)) delete resumo[k];
+  const oab = document.getElementById('oab').value.replace(/\D/g, '');
+  const uf = document.getElementById('uf').value.trim().toUpperCase();
+  resumo.navegador = navigator.userAgent;
+  resumo.origem = location.origin;
+  resumo.data = new Date().toISOString();
+
+  const e1 = etapa('Consulta pela OAB (últimos 60 dias)');
+  const r1 = await consultar({ numeroOab: oab, ufOab: uf, dataDisponibilizacaoInicio: hojeIso(-60), dataDisponibilizacaoFim: hojeIso(), itensPorPagina: 5, pagina: 1 });
+  resumo.consultaOab = { status: r1.status, erroRede: r1.erroRede, ms: r1.ms, json: !!r1.json, chaves: r1.json ? Object.keys(r1.json) : null, count: r1.json?.count, inicioResposta: r1.inicioTexto };
+  const itens1 = itensDe(r1.json);
+  if (r1.erroRede) e1.falha('o navegador bloqueou a resposta (provável restrição de acesso entre sites, CORS)');
+  else if (!r1.json) e1.falha(`resposta não é JSON (HTTP ${r1.status})`);
+  else e1.ok(`HTTP ${r1.status}, ${r1.json.count ?? itens1.length} comunicação(ões)`);
+
+  if (itens1[0]) {
+    resumo.camposDoItem = Object.keys(itens1[0]);
+    resumo.exemploDatas = itens1.slice(0, 5).map((i) => i.data_disponibilizacao || i.dataDisponibilizacao || null);
+    resumo.exemploTipos = itens1.slice(0, 5).map((i) => i.tipoDocumento || i.tipoComunicacao || null);
+  }
+
+  let proc = document.getElementById('proc').value.replace(/\D/g, '');
+  if (!proc && itens1[0]) proc = numeroDe(itens1[0]);
+  if (!proc) {
+    etapa('Busca por número de processo').falha('nenhum número disponível; informe um processo e repita');
+  } else {
+    for (const [nome, valor] of [['numeroProcesso', proc], ['numeroProcesso (com máscara)', proc.replace(/^(\d{7})(\d{2})(\d{4})(\d)(\d{2})(\d{4})$/, '$1-$2.$3.$4.$5.$6')]]) {
+      const e = etapa(`Busca pelo parâmetro ${nome}`);
+      const r = await consultar({ numeroProcesso: valor, itensPorPagina: 20, pagina: 1 });
+      const itens = itensDe(r.json);
+      const todosDoProcesso = itens.length > 0 && itens.every((i) => numeroDe(i) === proc);
+      resumo[nome] = { status: r.status, erroRede: r.erroRede, ms: r.ms, count: r.json?.count, itens: itens.length, todosDoMesmoProcesso: todosDoProcesso, datas: itens.slice(0, 10).map((i) => i.data_disponibilizacao || i.dataDisponibilizacao || null) };
+      if (r.erroRede) e.falha('bloqueado pelo navegador');
+      else if (!r.json) e.falha(`resposta não é JSON (HTTP ${r.status})`);
+      else if (!itens.length) e.falha(`HTTP ${r.status}, nenhuma comunicação retornada`);
+      else if (!todosDoProcesso) e.falha(`HTTP ${r.status}, mas vieram comunicações de outros processos (o filtro foi ignorado)`);
+      else e.ok(`HTTP ${r.status}, ${r.json.count ?? itens.length} comunicação(ões) deste processo`);
+    }
+  }
+
+  document.getElementById('resumo').value = JSON.stringify(resumo, null, 2);
+});
+
+document.getElementById('copiar').addEventListener('click', async (ev) => {
+  const area = document.getElementById('resumo');
+  try { await navigator.clipboard.writeText(area.value); ev.target.textContent = 'Copiado'; } catch { area.select(); ev.target.textContent = 'Texto selecionado'; }
+});
+</script>
+</body>
+</html>

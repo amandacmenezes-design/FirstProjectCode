@@ -73,3 +73,7 @@ scripts/gerar-pagina-unica.mjs
 ## Próximos passos sugeridos
 
 Importação em lote das intimações da OAB do dia; feriados municipais por comarca; lembretes por e-mail ou notificação; e sincronização entre aparelhos.
+
+## Skill do Claude
+
+A pasta `skill/painel-de-prazos/` reúne o projeto em forma de skill do Claude (código, calculadora de prazos na linha de comando, regras, API do DJEN e identidade visual). O arquivo `skill/painel-de-prazos.skill` é o pacote instalável.
