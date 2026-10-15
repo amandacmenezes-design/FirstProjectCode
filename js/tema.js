@@ -4,17 +4,18 @@
 
 export const PALETAS = {
   vidro: {
-    nome: 'Vidro (azul e laranja)',
+    nome: 'Vidro escuro (azul e laranja)',
     estilo: 'vidro',
+    sempreEscuro: true,
     claro: {
-      acento: '#163f80', suave: 'rgba(22, 63, 128, .12)', fundo: '#e9eef7', lateral: '#e9eef7', lateralBg: 'rgba(255, 255, 255, .42)', lateral2: 'rgba(255, 255, 255, .75)', lateralTinta: '#475268', lateralForte: '#163f80', lateralBorda: 'rgba(255, 255, 255, .75)', ouro: '#b8520f', d1: '#1b3f86', d2: '#0b1f45', brilho: '#2f5fb5', luz: '#dd6a17', luzClaro: '#ee8d45',
-      fundoImagem: 'radial-gradient(at 8% 8%, #b9c9ea 0, transparent 45%), radial-gradient(at 92% 10%, #f3c6a2 0, transparent 40%), radial-gradient(at 72% 88%, #ccc6ec 0, transparent 45%), radial-gradient(at 12% 92%, #bfdcef 0, transparent 40%), #e9eef7',
-      superficie: 'rgba(255, 255, 255, .58)', superficie2: 'rgba(255, 255, 255, .5)', linha: 'rgba(20, 35, 75, .10)',
+      acento: '#4a7fe6', acentoTinta: '#ffffff', suave: 'rgba(74, 127, 230, .16)', fundo: '#060b18', lateral: '#060b18', lateralBg: 'rgba(14, 24, 52, .5)', lateral2: 'rgba(255, 255, 255, .06)', lateralTinta: '#a9b6d4', lateralForte: '#ffffff', lateralBorda: 'rgba(150, 175, 255, .12)', ouro: '#c85f15', d1: '#1f4594', d2: '#0d1f4a', brilho: '#4a7fe6', luz: '#e0701a', luzClaro: '#f0904a',
+      fundoImagem: 'radial-gradient(at 10% 5%, #163276 0, transparent 45%), radial-gradient(at 90% 8%, #3b200f 0, transparent 35%), radial-gradient(at 75% 90%, #1d2a6e 0, transparent 50%), radial-gradient(at 10% 95%, #0f2c5a 0, transparent 40%), #060b18',
+      superficie: 'rgba(22, 36, 74, .42)', superficie2: 'rgba(255, 255, 255, .05)', linha: 'rgba(150, 175, 255, .12)', vidroBorda: 'rgba(150, 175, 255, .14)', vidroBrilho: 'rgba(255, 255, 255, .06)',
     },
     escuro: {
-      acento: '#7f9fe0', suave: 'rgba(127, 159, 224, .16)', fundo: '#0a0f1e', lateral: '#0a0f1e', lateralBg: 'rgba(18, 26, 50, .45)', lateral2: 'rgba(255, 255, 255, .08)', lateralTinta: '#a9b4cc', lateralForte: '#ffffff', lateralBorda: 'rgba(255, 255, 255, .08)', d1: '#1b3f86', d2: '#0b1f45', brilho: '#2f5fb5', luz: '#e0701a', luzClaro: '#ee8d45',
-      fundoImagem: 'radial-gradient(at 8% 8%, #172a63 0, transparent 45%), radial-gradient(at 92% 10%, #4f2410 0, transparent 40%), radial-gradient(at 72% 88%, #2a1c5c 0, transparent 45%), #0a0f1e',
-      superficie: 'rgba(20, 28, 52, .55)', superficie2: 'rgba(255, 255, 255, .06)', linha: 'rgba(255, 255, 255, .09)',
+      acento: '#4a7fe6', acentoTinta: '#ffffff', suave: 'rgba(74, 127, 230, .16)', fundo: '#060b18', lateral: '#060b18', lateralBg: 'rgba(14, 24, 52, .5)', lateral2: 'rgba(255, 255, 255, .06)', lateralTinta: '#a9b6d4', lateralForte: '#ffffff', lateralBorda: 'rgba(150, 175, 255, .12)', ouro: '#c85f15', d1: '#1f4594', d2: '#0d1f4a', brilho: '#4a7fe6', luz: '#e0701a', luzClaro: '#f0904a',
+      fundoImagem: 'radial-gradient(at 10% 5%, #163276 0, transparent 45%), radial-gradient(at 90% 8%, #3b200f 0, transparent 35%), radial-gradient(at 75% 90%, #1d2a6e 0, transparent 50%), radial-gradient(at 10% 95%, #0f2c5a 0, transparent 40%), #060b18',
+      superficie: 'rgba(22, 36, 74, .42)', superficie2: 'rgba(255, 255, 255, .05)', linha: 'rgba(150, 175, 255, .12)', vidroBorda: 'rgba(150, 175, 255, .14)', vidroBrilho: 'rgba(255, 255, 255, .06)',
     },
   },
   moderno: {
@@ -66,6 +67,13 @@ export const FONTES = {
   classica: { nome: 'Clássica', descricao: 'Newsreader + Plus Jakarta Sans', titulo: "'Newsreader', Georgia, serif", texto: "'Plus Jakarta Sans', system-ui, sans-serif" },
 };
 
+const BASE_ESCURO = [
+  '--superficie:#121b2b', '--superficie-2:#172234', '--tinta:#e7ecf3', '--tinta-2:#a3afc2', '--tinta-3:#75829a', '--linha:#233047',
+  '--vencido:#f4877b', '--vencido-bg:rgba(244, 135, 123, .14)', '--hoje:#f8a26a', '--hoje-bg:rgba(248, 162, 106, .14)',
+  '--urgente:#e8c564', '--urgente-bg:rgba(232, 197, 100, .14)', '--ok:#6fd09a', '--ok-bg:rgba(111, 208, 154, .14)',
+  '--sombra:0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .3)', '--sombra-forte:0 20px 60px rgba(0, 0, 0, .6)',
+].join(';');
+
 export const APARENCIA_PADRAO = { paleta: 'vidro', fonte: 'outfit' };
 
 function variaveis(t, f) {
@@ -79,6 +87,8 @@ function variaveis(t, f) {
   if (t.ouro) v.push(`--ouro:${t.ouro}`);
   if (t.fundoImagem) v.push(`--fundo-imagem:${t.fundoImagem}`);
   if (t.luzClaro) v.push(`--luz-claro:${t.luzClaro}`);
+  if (t.acentoTinta) v.push(`--acento-tinta:${t.acentoTinta}`);
+  if (t.vidroBorda) v.push(`--vidro-borda:${t.vidroBorda}`, `--vidro-brilho:${t.vidroBrilho}`);
   if (t.superficie) v.push(`--superficie:${t.superficie}`, `--superficie-2:${t.superficie2}`, `--linha:${t.linha}`);
   if (f) v.push(`--f-titulo:${f.titulo}`, `--f-texto:${f.texto}`);
   return v.join(';');
@@ -88,6 +98,13 @@ function variaveis(t, f) {
 export function cssDoTema({ paleta, fonte } = APARENCIA_PADRAO) {
   const p = PALETAS[paleta] || PALETAS[APARENCIA_PADRAO.paleta];
   const f = FONTES[fonte] || FONTES[APARENCIA_PADRAO.fonte];
+  if (p.sempreEscuro) {
+    // Visual escuro fixo: usa a base escura da interface em qualquer tema do sistema.
+    const v = `${BASE_ESCURO};${variaveis(p.escuro, f)};color-scheme:dark`;
+    return `:root{${v}}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${v}}}
+:root[data-theme="dark"]{${v}}`;
+  }
   return `:root{${variaveis(p.claro, f)}}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${variaveis(p.escuro)}}}
 :root[data-theme="dark"]{${variaveis(p.escuro)}}`;

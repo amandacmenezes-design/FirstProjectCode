@@ -498,7 +498,7 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
 .destaque.coluna .destaque-corpo { flex: none; }
 
 /* ---------- estilo vidro (glassmorphism) ---------- */
-:root[data-estilo="vidro"] { --raio: 22px; --sombra: 0 1px 1px rgba(20, 30, 70, .04), 0 10px 30px rgba(20, 30, 70, .08); }
+:root[data-estilo="vidro"] { --raio: 22px; }
 :root[data-estilo="vidro"] body { background: var(--fundo-imagem, var(--fundo)); background-attachment: fixed; }
 :root[data-estilo="vidro"] .shell { background: none; }
 :root[data-estilo="vidro"] .lateral,
@@ -511,10 +511,10 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
 :root[data-estilo="vidro"] .fonte-op {
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   backdrop-filter: blur(20px) saturate(160%);
-  border-color: rgba(255, 255, 255, .55);
+  border-color: var(--vidro-borda, rgba(255, 255, 255, .55));
 }
 :root[data-estilo="vidro"] .cartao, :root[data-estilo="vidro"] .kpi, :root[data-estilo="vidro"] .proc {
-  box-shadow: var(--sombra), inset 0 1px 0 rgba(255, 255, 255, .6);
+  box-shadow: var(--sombra), inset 0 1px 0 var(--vidro-brilho, rgba(255, 255, 255, .6));
 }
 :root[data-estilo="vidro"] .ag-item { background: var(--superficie-2); border-color: transparent; }
 :root[data-estilo="vidro"] .ag-item:hover { background: var(--superficie); }
@@ -539,7 +539,7 @@ body.travado .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
 :root[data-estilo="vidro"] .kpi-ic .ic { width: 21px; height: 21px; }
 :root[data-estilo="vidro"] .nav-item .ic, :root[data-estilo="vidro"] .nm-item .ic {
   width: 34px; height: 34px; padding: 8px; border-radius: 50%;
-  background: var(--superficie); box-shadow: 0 3px 8px rgba(20, 30, 70, .08), inset 0 1px 0 rgba(255, 255, 255, .7); opacity: 1;
+  background: var(--superficie); box-shadow: 0 3px 8px rgba(0, 10, 40, .12), inset 0 1px 0 var(--vidro-brilho, rgba(255, 255, 255, .7)); opacity: 1;
 }
 :root[data-estilo="vidro"] .nav-item { padding: 6px 10px; border-radius: 999px; }
 :root[data-estilo="vidro"] .nav-item.ativo { background: var(--superficie); box-shadow: 0 6px 18px rgba(20, 30, 70, .08); }
