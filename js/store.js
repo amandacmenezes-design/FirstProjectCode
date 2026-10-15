@@ -1,6 +1,3 @@
-import { addDias, hojeIso } from './datas.js';
-import { digitoVerificador } from './cnj.js';
-
 // Os dados ficam somente no navegador de quem usa o painel (localStorage).
 // Nada é enviado a servidor algum, e nada é gravado no repositório.
 const CHAVE = 'painel-prazos:v1';
@@ -20,7 +17,10 @@ export function carregar() {
   try {
     const bruto = localStorage.getItem(CHAVE);
     if (!bruto) return null;
-    return normalizar(JSON.parse(bruto));
+    const salvo = normalizar(JSON.parse(bruto));
+    const estado = removerExemplos(salvo);
+    if (estado !== salvo) localStorage.setItem(CHAVE, JSON.stringify(estado));
+    return estado;
   } catch {
     return null;
   }
@@ -52,29 +52,19 @@ export function novoId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-function numeroExemplo(seq, origem) {
-  const n = String(seq).padStart(7, '0');
-  return `${n}-${digitoVerificador(n, '2026', '8', '14', origem)}.2026.8.14.${origem}`;
-}
+// Versões anteriores abriam com dados fictícios. Remove esses exemplos de um estado salvo,
+// preservando qualquer registro real que tenha sido incluído ao lado deles.
+const CLIENTES_EXEMPLO = ['Cliente Exemplo A', 'Condomínio Exemplo', 'Cliente Exemplo B'];
+const TAREFA_EXEMPLO = 'Conferir portaria de feriados do TJPA para 2027';
 
-// Dados fictícios para a primeira abertura, claramente marcados como exemplo.
-export function estadoExemplo(hoje = hojeIso()) {
-  const e = estadoVazio();
-  e.exemplo = true;
-  const p1 = { id: novoId(), numero: numeroExemplo(801234, '0301'), cliente: 'Cliente Exemplo A', parteContraria: 'Construtora Exemplo Ltda.', orgao: '5ª Vara Cível e Empresarial de Belém', area: 'Imobiliário', obs: 'Ação de rescisão contratual (exemplo)' };
-  const p2 = { id: novoId(), numero: numeroExemplo(805678, '0301'), cliente: 'Condomínio Exemplo', parteContraria: 'Condômino Exemplo', orgao: '2ª Vara Cível de Belém', area: 'Condominial', obs: 'Cobrança de cotas condominiais (exemplo)' };
-  const p3 = { id: novoId(), numero: numeroExemplo(800321, '0006'), cliente: 'Cliente Exemplo B', parteContraria: 'Banco Exemplo S.A.', orgao: 'Juizado Especial Cível de Ananindeua', area: 'Consumidor', obs: '' };
-  e.processos.push(p1, p2, p3);
-  e.prazos.push(
-    { id: novoId(), processoId: p1.id, descricao: 'Réplica', dataMarco: addDias(hoje, -20), marco: 'disponibilizacao', contagem: 'uteis', dias: 15, dobro: false, suspenderRecesso: true, cumprido: false },
-    { id: novoId(), processoId: p2.id, descricao: 'Embargos de declaração', dataMarco: addDias(hoje, -3), marco: 'intimacao', contagem: 'uteis', dias: 5, dobro: false, suspenderRecesso: true, cumprido: false },
-    { id: novoId(), processoId: p3.id, descricao: 'Recurso inominado', dataMarco: addDias(hoje, -1), marco: 'disponibilizacao', contagem: 'uteis', dias: 10, dobro: false, suspenderRecesso: true, cumprido: false },
-    { id: novoId(), processoId: p1.id, descricao: 'Contestação', dataMarco: addDias(hoje, -40), marco: 'intimacao', contagem: 'uteis', dias: 15, dobro: false, suspenderRecesso: true, cumprido: true },
-  );
-  e.tarefas.push(
-    { id: novoId(), titulo: 'Reunir comprovantes de pagamento com o cliente', processoId: p1.id, data: addDias(hoje, 2), prioridade: 'alta', concluida: false },
-    { id: novoId(), titulo: 'Atualizar planilha de débito condominial', processoId: p2.id, data: addDias(hoje, 6), prioridade: 'normal', concluida: false },
-    { id: novoId(), titulo: 'Conferir portaria de feriados do TJPA para 2027', processoId: '', data: addDias(hoje, 30), prioridade: 'normal', concluida: false },
-  );
-  return e;
+export function removerExemplos(e) {
+  if (!e.exemplo) return e;
+  const ids = new Set(e.processos.filter((p) => CLIENTES_EXEMPLO.includes(p.cliente)).map((p) => p.id));
+  return {
+    ...e,
+    exemplo: false,
+    processos: e.processos.filter((p) => !ids.has(p.id)),
+    prazos: e.prazos.filter((p) => !ids.has(p.processoId)),
+    tarefas: e.tarefas.filter((t) => !ids.has(t.processoId) && t.titulo !== TAREFA_EXEMPLO),
+  };
 }

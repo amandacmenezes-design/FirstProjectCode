@@ -95,3 +95,20 @@ test('número CNJ: dígito verificador', () => {
   assert.equal(errado.valido, false);
   assert.equal(analisarNumeroCnj('123').valido, false);
 });
+
+test('remove os dados de exemplo e preserva os registros reais', async () => {
+  const { removerExemplos } = await import('../js/store.js');
+  const salvo = {
+    exemplo: true,
+    processos: [{ id: 'a', cliente: 'Cliente Exemplo A' }, { id: 'r', cliente: 'Maria' }],
+    prazos: [{ id: 1, processoId: 'a' }, { id: 2, processoId: 'r' }],
+    tarefas: [{ id: 't1', processoId: 'a', titulo: 'x' }, { id: 't2', processoId: '', titulo: 'Conferir portaria de feriados do TJPA para 2027' }, { id: 't3', processoId: '', titulo: 'Ligar para Maria' }],
+    config: {},
+  };
+  const limpo = removerExemplos(salvo);
+  assert.equal(limpo.exemplo, false);
+  assert.deepEqual(limpo.processos.map((p) => p.id), ['r']);
+  assert.deepEqual(limpo.prazos.map((p) => p.id), [2]);
+  assert.deepEqual(limpo.tarefas.map((t) => t.id), ['t3']);
+  assert.equal(removerExemplos(limpo), limpo);
+});

@@ -3,12 +3,12 @@ import { PRESETS } from './feriados.js';
 import { PRAZOS_USUAIS, calcularPrazo, criarCalendario, situacao } from './prazos.js';
 import { analisarNumeroCnj } from './cnj.js';
 import { buscarComunicacoes, sugerirPrazo } from './djen.js';
-import { carregar, estadoExemplo, estadoVazio, normalizar, novoId, salvar } from './store.js';
+import { carregar, estadoVazio, normalizar, novoId, salvar } from './store.js';
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const MESES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
-let estado = carregar() || estadoExemplo();
+let estado = carregar() || estadoVazio();
 const ui = {
   aba: 'painel',
   gaveta: null, // 'prazo' | 'processo' | null
@@ -139,6 +139,13 @@ function telaPainel() {
         <div class="destaque-data"><span class="destaque-dia">${proximo.data.slice(8)}</span><span>${MESES_CURTO[Number(proximo.data.slice(5, 7)) - 1]} · ${nomeDiaSemana(proximo.data, true)}</span></div>
         <div class="destaque-corpo"><span class="eyebrow">Próximo vencimento · ${esc(proximo.sit.rotulo.toLowerCase())}</span><strong class="destaque-titulo">${esc(proximo.titulo)}</strong><span class="destaque-proc">${rotuloProcesso(proximo.processoId) || 'Sem processo vinculado'}</span></div>
         <button class="btn btn-claro" data-acao="cumprir" data-id="${proximo.id}">${ic('check')}Dar baixa</button>
+      </div>`;
+  } else if (!estado.processos.length && !estado.prazos.length) {
+    destaque = `
+      <div class="destaque">
+        <div class="destaque-ic">${ic('balanca')}</div>
+        <div class="destaque-corpo"><span class="eyebrow">Primeiros passos</span><strong class="destaque-titulo">Cadastre seu primeiro prazo</strong><span>Clique em “Novo prazo”, digite o número do processo e busque a publicação no DJEN. O processo é cadastrado automaticamente.</span></div>
+        <button class="btn btn-claro" data-acao="abrir-prazo">${ic('mais')}Novo prazo</button>
       </div>`;
   } else {
     destaque = `
@@ -658,7 +665,6 @@ function render() {
           <div class="barra-titulos"><h1>${cab.titulo}</h1><p>${cab.sub}</p></div>
           <div class="barra-acoes">${cab.acoes}</div>
         </header>
-        ${estado.exemplo ? `<div class="faixa"><span>Você está vendo <strong>dados de exemplo</strong>, todos fictícios.</span><button class="btn btn-sec" data-acao="limpar-exemplo">Começar com painel vazio</button></div>` : ''}
         <main class="conteudo">${tela()}</main>
         <footer class="rodape">Ferramenta de apoio. Confira sempre o termo final com a certidão do sistema e com o calendário oficial do tribunal.</footer>
       </div>
@@ -757,7 +763,6 @@ app.addEventListener('click', async (ev) => {
       }
       break;
     case 'excluir-suspensao': estado.config.personalizados.splice(Number(id), 1); persistir('Suspensão removida.'); break;
-    case 'limpar-exemplo': estado = estadoVazio(); ui.aba = 'processos'; persistir('Painel zerado. Cadastre seu primeiro processo.'); break;
     case 'apagar-tudo': if (confirmar(b)) { estado = estadoVazio(); persistir('Todos os dados foram apagados.'); } break;
     case 'exportar': document.getElementById('backup').value = JSON.stringify(estado, null, 2); break;
     case 'copiar-backup': {
