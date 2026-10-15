@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.DS_Store
+# Nunca versionar dados de clientes ou backups do painel
+*backup*.json
